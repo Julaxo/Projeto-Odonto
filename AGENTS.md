@@ -149,6 +149,13 @@ Suporte obrigatório a:
 
 Utilizar tema do React Native Reusables.
 
+### Documentação
+
+- Sempre use as regras de `.codex/skills/update-readme.md` ao criar, alterar ou remover código relevante.
+- Atualize o `README.md` quando houver mudanças estruturais, novas telas, novas rotas, novos services, novas stores, novas variáveis de ambiente ou alterações relevantes nos fluxos do app.
+- Não finalize tarefas estruturais com o `README.md` desatualizado.
+- Documente apenas o que existe no código atual.
+
 ### Respostas
 
 Ao gerar código:
