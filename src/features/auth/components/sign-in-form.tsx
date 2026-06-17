@@ -6,7 +6,8 @@ import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuthStore } from '@/store/auth.store';
+import { Text } from '@/components/ui/text';
+import { useLogin } from '@/features/auth/hooks/use-login';
 
 const signInSchema = z.object({
   email: z.email('Informe um email valido.'),
@@ -16,7 +17,7 @@ const signInSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 
 export function SignInForm() {
-  const signIn = useAuthStore((state) => state.signIn);
+  const { errorMessage, isFirebaseConfigured, isLoading, login } = useLogin();
   const {
     control,
     formState: { errors, isSubmitting },
@@ -29,18 +30,21 @@ export function SignInForm() {
     resolver: zodResolver(signInSchema),
   });
 
-  function handleValidSubmit(data: SignInFormData) {
-    signIn({
-      email: data.email,
-      id: 'local-user',
-      name: 'Dra. Marina Almeida',
-    });
-
+  async function handleValidSubmit(data: SignInFormData) {
+    await login(data);
     router.replace('/(tabs)');
   }
 
   return (
     <View className="gap-4">
+      {!isFirebaseConfigured ? (
+        <View className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+          <Text accessibilityRole="alert" className="text-sm font-medium text-destructive">
+            Firebase nao configurado. Preencha as variaveis EXPO_PUBLIC_FIREBASE_*.
+          </Text>
+        </View>
+      ) : null}
+
       <Controller
         control={control}
         name="email"
@@ -76,10 +80,16 @@ export function SignInForm() {
           />
         )}
       />
+      {errorMessage ? (
+        <Text accessibilityRole="alert" className="text-sm font-medium text-destructive">
+          {errorMessage}
+        </Text>
+      ) : null}
       <Button
         accessibilityLabel="Entrar na conta"
-        disabled={isSubmitting}
-        label={isSubmitting ? 'Entrando...' : 'Entrar'}
+        className="bg-blue-900 dark:bg-blue-700"
+        disabled={isSubmitting || isLoading || !isFirebaseConfigured}
+        label={isSubmitting || isLoading ? 'Entrando...' : 'Entrar'}
         onPress={handleSubmit(handleValidSubmit)}
       />
     </View>

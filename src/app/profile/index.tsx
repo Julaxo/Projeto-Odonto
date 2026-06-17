@@ -5,14 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function ProfileScreen() {
-  const signOut = useAuthStore((state) => state.signOut);
+  const { signOut } = useAuth();
   const user = useAuthStore((state) => state.user);
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await signOut();
     router.replace('/(auth)/sign-in');
   }
 

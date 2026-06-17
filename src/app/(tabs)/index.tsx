@@ -203,7 +203,7 @@ function NextAppointmentCard() {
 function RequestAppointmentButton() {
   return (
     <TouchableOpacity
-      onPress={() => router.push('/appointments/new' as never)}
+      onPress={() => router.push('/appointments/new')}
       accessibilityLabel="Solicitar novo atendimento"
       accessibilityRole="button"
       activeOpacity={0.85}

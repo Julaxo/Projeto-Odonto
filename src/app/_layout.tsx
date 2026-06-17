@@ -13,7 +13,7 @@ import { AppProviders } from '@/lib/providers';
 export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: '(auth)/sign-in',
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -51,6 +51,8 @@ function RootLayoutNav() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)/sign-in" />
+          <Stack.Screen name="appointments/details" />
+          <Stack.Screen name="appointments/new" />
           <Stack.Screen name="profile/index" />
           <Stack.Screen name="settings/index" />
         </Stack>
