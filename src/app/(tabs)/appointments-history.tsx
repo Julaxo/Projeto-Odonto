@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 
 import { MyAgendaScreen } from '@/features/appointments/components/my-agenda-screen';
 
-export default function AppointmentsScreen() {
+export default function AppointmentsHistoryScreen() {
   const router = useRouter();
 
   return (
@@ -10,14 +10,14 @@ export default function AppointmentsScreen() {
       onOpenAppointmentDetails={() => router.push('/appointments/details')}
       onOpenSettings={() => router.push('/settings')}
       onSelectTab={(tab) => {
-        if (tab === 'history') {
-          router.push('/(tabs)/appointments-history');
+        if (tab === 'upcoming') {
+          router.push('/(tabs)/appointments');
           return;
         }
 
-        router.push('/(tabs)/appointments');
+        router.push('/(tabs)/appointments-history');
       }}
-      selectedTab="upcoming"
+      selectedTab="history"
     />
   );
 }
