@@ -34,14 +34,14 @@ export default function SignInScreen() {
           </View>
           <View className="items-center gap-1">
             <Text className="text-2xl font-bold text-blue-900 dark:text-blue-300">OdontoLuma</Text>
-            <Text className="text-center text-sm text-muted-foreground">Entre para acompanhar sua agenda odontologica.</Text>
+            <Text className="text-center text-sm text-muted-foreground">Acesse ou crie sua conta para acompanhar sua agenda odontologica.</Text>
           </View>
         </View>
 
         <Card className="gap-5 rounded-2xl p-5">
           <View className="gap-1">
-            <Text className="text-2xl font-bold text-foreground">Login</Text>
-            <Text className="text-sm text-muted-foreground">Use seu email e senha cadastrados no Firebase.</Text>
+            <Text className="text-2xl font-bold text-foreground">Acesso</Text>
+            <Text className="text-sm text-muted-foreground">Use o Firebase Auth para entrar ou criar um novo cadastro.</Text>
           </View>
           <SignInForm />
         </Card>
