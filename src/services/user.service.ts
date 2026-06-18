@@ -22,8 +22,7 @@ export class UsuarioService {
    * Obtém os dados de um usuário a partir do token de autenticação (JWT) decodificando seu payload.
    * @param token ID Token (JWT) obtido diretamente do fluxo de autenticação do cliente
    */
-  public async obterPorToken(token: string): Promise<Usuario | null> {
-    const uid = this.getUidFromToken(token);
+  public async obterPorToken(uid: string): Promise<Usuario | null> {
     const docRef = doc(this.getCollectionRef(), uid);
     const docSnap = await getDoc(docRef);
 
@@ -35,25 +34,5 @@ export class UsuarioService {
       id: docSnap.id,
       ...docSnap.data(),
     } as Usuario;
-  }
-
-  /**
-   * Função utilitária privada para extrair de forma segura o 'user_id' contido no payload do JWT.
-   */
-  private getUidFromToken(token: string): string {
-    try {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join(""),
-      );
-      const decoded = JSON.parse(jsonPayload);
-      return decoded.user_id || decoded.sub;
-    } catch (error) {
-      throw new Error("Token de autenticação inválido ou corrompido.");
-    }
   }
 }
