@@ -1,9 +1,22 @@
-export type AppointmentStatus = 'confirmed' | 'pending' | 'completed';
+export type AgendamentoStatus = "PENDENTE" | "CONFIRMADO" | "CANCELADO";
 
-export type Appointment = {
+export interface AgendamentoInput {
+  clienteId: string;
+  profissionalId: string;
+  dataAgendamento: string; // Ex: "2026-06-17"
+  horaInicio: string; // Ex: "09:00"
+  horarioFim: string; // Ex: "09:30"
+  duracaoMinutos: number; // Ex: 60
+}
+
+export interface AgendamentoData {
   id: string;
-  patientName: string;
-  procedure: string;
-  startsAt: string;
-  status: AppointmentStatus;
-};
+  clienteId: string;
+  dataAgendamento: string;
+  horarioInicio: string;
+  horarioFim: string;
+  duracaoMinutos: number;
+  status: AgendamentoStatus;
+  criadoEm: string;
+  ultimaAtualizacao: string;
+}

@@ -1,5 +1,12 @@
-import { getApp, getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from '@firebase/app';
-import { getAuth, type Auth } from '@firebase/auth';
+import {
+  getApp,
+  getApps,
+  initializeApp,
+  type FirebaseApp,
+  type FirebaseOptions,
+} from "@firebase/app";
+import { getAuth, type Auth } from "@firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -10,13 +17,22 @@ const firebaseConfig: FirebaseOptions = {
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
 };
 
-const requiredConfigKeys: (keyof FirebaseOptions)[] = ['apiKey', 'appId', 'authDomain', 'projectId'];
+const requiredConfigKeys: (keyof FirebaseOptions)[] = [
+  "apiKey",
+  "appId",
+  "authDomain",
+  "projectId",
+];
 
-export const hasFirebaseConfig = requiredConfigKeys.every((key) => Boolean(firebaseConfig[key]));
+export const hasFirebaseConfig = requiredConfigKeys.every(key =>
+  Boolean(firebaseConfig[key]),
+);
 
 export function getFirebaseApp(): FirebaseApp {
   if (!hasFirebaseConfig) {
-    throw new Error('Firebase nao configurado. Verifique as variaveis EXPO_PUBLIC_FIREBASE_*.');
+    throw new Error(
+      "Firebase nao configurado. Verifique as variaveis EXPO_PUBLIC_FIREBASE_*.",
+    );
   }
 
   return getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -25,3 +41,5 @@ export function getFirebaseApp(): FirebaseApp {
 export function getFirebaseAuth(): Auth {
   return getAuth(getFirebaseApp());
 }
+
+export const db = getFirestore(getFirebaseApp());
