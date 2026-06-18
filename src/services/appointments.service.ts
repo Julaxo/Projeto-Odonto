@@ -58,7 +58,6 @@ class AppointmentService {
    */
   async buscarAgendamentosPorDia(
     dataAgendamento: string,
-    clienteId: string,
   ): Promise<AgendamentoData[]> {
     const q = query(
       this.getCollectionRef(),
