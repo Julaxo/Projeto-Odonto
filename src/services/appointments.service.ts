@@ -4,8 +4,8 @@ import {
   collection,
   doc,
   getDocs,
+  orderBy,
   query,
-  serverTimestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -45,8 +45,8 @@ class AppointmentService {
     const novoAgendamento = {
       ...dados,
       status: "PENDENTE",
-      criadoEm: serverTimestamp(),
-      ultimaAtualizacao: serverTimestamp(),
+      criadoEm: new Date().toISOString(),
+      ultimaAtualizacao: new Date().toISOString(),
     };
 
     const docRef = await addDoc(this.getCollectionRef(), novoAgendamento);
@@ -58,6 +58,7 @@ class AppointmentService {
    */
   async buscarAgendamentosPorDia(
     dataAgendamento: string,
+    clienteId: string,
   ): Promise<AgendamentoData[]> {
     const q = query(
       this.getCollectionRef(),
@@ -77,7 +78,36 @@ class AppointmentService {
   }
 
   /**
-   * 3. DENTISTA: Confirma o agendamento e define o procedimento + tempo real
+   * 3. CLIENTE: Busca todos os agendamentos posteriores à data de hoje
+   */
+  async buscarAgendamentosPosteriores(
+    clienteId: string,
+  ): Promise<AgendamentoData[]> {
+    // Obtém a data de hoje em formato "YYYY-MM-DD"
+    const hoje = new Date();
+    const hojeString = hoje.toISOString().split("T")[0];
+
+    const q = query(
+      this.getCollectionRef(),
+      where("dataAgendamento", ">", hojeString),
+      where("status", "in", ["PENDENTE", "CONFIRMADO"]),
+      where("clienteId", "==", clienteId),
+      orderBy("dataAgendamento", "asc"),
+    );
+
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(
+      docSnapshot =>
+        ({
+          id: docSnapshot.id,
+          ...docSnapshot.data(),
+        }) as AgendamentoData,
+    );
+  }
+
+  /**
+   * 4. DENTISTA: Confirma o agendamento e define o procedimento + tempo real
    */
   async dentistaConfirmar(
     agendamentoId: string,
@@ -95,19 +125,19 @@ class AppointmentService {
       status: "CONFIRMADO",
       duracaoMinutos,
       horarioFim: novoHorarioFim,
-      ultimaAtualizacao: serverTimestamp(),
+      ultimaAtualizacao: new Date().toISOString(),
     });
   }
 
   /**
-   * 6. AMBOS: Cancela ou rejeita o fluxo
+   * 5. AMBOS: Cancela ou rejeita o fluxo
    */
   async cancelarAgendamento(agendamentoId: string): Promise<void> {
     const docRef = doc(db, "agendamentos", agendamentoId);
 
     await updateDoc(docRef, {
       status: "CANCELADO",
-      ultimaAtualizacao: serverTimestamp(),
+      ultimaAtualizacao: new Date().toISOString(),
     });
   }
 }

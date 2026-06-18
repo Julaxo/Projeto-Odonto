@@ -1,5 +1,3 @@
-import { Timestamp } from "firebase/firestore";
-
 export type AgendamentoStatus = "PENDENTE" | "CONFIRMADO" | "CANCELADO";
 
 export interface AgendamentoInput {
@@ -19,6 +17,6 @@ export interface AgendamentoData {
   horarioFim: string;
   duracaoMinutos: number;
   status: AgendamentoStatus;
-  criadoEm: Timestamp;
-  ultimaAtualizacao: Timestamp;
+  criadoEm: string;
+  ultimaAtualizacao: string;
 }
