@@ -106,6 +106,7 @@ Ela exibe:
 - Botao para atualizar a agenda manualmente
 - Consultas agrupadas por mes
 - Alternancia entre proximas consultas e historico por rotas internas do grupo de tabs
+- Aba Proximas exibe consultas do dia atual em diante; aba Historico exibe todas as consultas do paciente
 - Cards com data, horario, procedimento, profissional e status
 - Navegacao para `/appointments/details` ao tocar em uma consulta
 
@@ -183,7 +184,7 @@ Ele expoe:
 - `createAppointment(input)` - cria um agendamento pendente
 - `getAppointmentsByDay(dataAgendamento)` - busca horarios pendentes ou confirmados de uma data
 - `listPatientAppointmentsDentist(clienteId)` - busca proximos agendamentos do dentista
-- `listPatientAppointments(clienteId)` - busca proximos agendamentos do paciente
+- `listPatientAppointments(clienteId)` - busca a agenda do paciente para proximas consultas e historico
 - `listAppointments()` - lista agendamentos e mapeia para o formato compartilhado de cards
 - `confirmDentistAppointment(input)` - confirma um agendamento pelo fluxo do dentista
 - `appointmentService.dentistaConfirmar(...)` - confirma um agendamento pelo fluxo do dentista

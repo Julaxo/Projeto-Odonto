@@ -162,13 +162,9 @@ class AppointmentService {
   async buscarAgendamentosPosteriores(
     clienteId: string,
   ): Promise<AgendamentoData[]> {
-    const hojeString = new Date().toISOString().split("T")[0];
     const q = query(
       this.getCollectionRef(),
       where("clienteId", "==", clienteId),
-      where("dataAgendamento", ">=", hojeString),
-      where("status", "in", ACTIVE_STATUSES),
-      orderBy("dataAgendamento", "asc"),
     );
 
     const snapshot = await getDocs(q);

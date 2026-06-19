@@ -21,6 +21,7 @@ type AgendaAppointment = {
   id: string;
   monthLabel: string;
   procedure: string;
+  sortKey: string;
   status: AgendaStatus;
   time: string;
   weekday: string;
@@ -108,6 +109,7 @@ function toAgendaAppointment(appointment: AgendamentoData): AgendaAppointment {
     id: appointment.id,
     monthLabel: formatMonthLabel(date),
     procedure: appointment.procedimento,
+    sortKey: `${appointment.dataAgendamento}T${appointment.horarioInicio}`,
     status: mapStatus(appointment.status),
     time: appointment.horarioInicio,
     weekday: new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
@@ -120,7 +122,9 @@ function toAgendaAppointment(appointment: AgendamentoData): AgendaAppointment {
 function groupAppointments(appointments: AgendaAppointment[]): AgendaSection[] {
   const sections = new Map<string, AgendaAppointment[]>();
 
-  appointments.forEach((appointment) => {
+  const sortedAppointments = [...appointments].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  sortedAppointments.forEach((appointment) => {
     const section = sections.get(appointment.monthLabel) ?? [];
     section.push(appointment);
     sections.set(appointment.monthLabel, section);
@@ -254,12 +258,27 @@ export function MyAgendaScreen({
   const userId = useAuthStore((state) => state.user?.id);
   const agendaQuery = usePatientAppointments(userId);
   const appointments = useMemo(
-    () => (agendaQuery.data ?? []).map(toAgendaAppointment),
+    () => agendaQuery.data ?? [],
     [agendaQuery.data],
   );
+  const filteredAppointments = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+
+    if (selectedTab === "history") {
+      return appointments;
+    }
+
+    return appointments.filter(
+      (appointment) => appointment.dataAgendamento >= today,
+    );
+  }, [appointments, selectedTab]);
+  const agendaAppointments = useMemo(
+    () => filteredAppointments.map(toAgendaAppointment),
+    [filteredAppointments],
+  );
   const agendaSections = useMemo(
-    () => groupAppointments(appointments),
-    [appointments],
+    () => groupAppointments(agendaAppointments),
+    [agendaAppointments],
   );
   const isRefreshing = agendaQuery.isFetching && !agendaQuery.isLoading;
 
@@ -357,7 +376,7 @@ export function MyAgendaScreen({
               Carregando agenda...
             </Text>
           </View>
-        ) : selectedTab === "history" || agendaSections.length === 0 ? (
+        ) : agendaSections.length === 0 ? (
           <EmptyState selectedTab={selectedTab} />
         ) : (
           <View className="mt-6 gap-6">
