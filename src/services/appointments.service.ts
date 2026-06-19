@@ -2,7 +2,6 @@ import {
   addDoc,
   collection,
   doc,
-  DocumentSnapshot,
   getDoc,
   getDocs,
   orderBy,
@@ -10,6 +9,7 @@ import {
   updateDoc,
   where,
   type DocumentData,
+  type DocumentSnapshot,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 
@@ -244,9 +244,7 @@ export async function listPatientAppointments(
   return appointmentService.buscarAgendamentosPosteriores(clienteId);
 }
 
-export async function listPatientAppointmentsDentist(
-  clienteId: string,
-): Promise<AgendamentoData[]> {
+export async function listDentistAppointments(): Promise<AgendamentoData[]> {
   return appointmentService.buscarAgendamentosPosterioresDentista();
 }
 

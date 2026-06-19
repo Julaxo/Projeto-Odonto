@@ -128,6 +128,15 @@ Ela exibe:
 - Profissional, procedimento, status e informacoes de duracao
 - Aviso de que a confirmacao do horario e feita pelo dentista
 
+A tela de agenda do dentista fica em `src/features/dentist/components/dentist-agenda-screen.tsx` e e renderizada pela rota `/(dentist)/agenda`.
+
+Ela exibe:
+
+- Consultas do dentista carregadas pelo hook `useDentistAppointments()`
+- Botao para atualizar as consultas manualmente
+- Consultas agrupadas por mes
+- Cards com data, horario, paciente, procedimento e status
+
 O formulario de login fica em `src/features/auth/components/sign-in-form.tsx`.
 
 Ele usa:
@@ -171,6 +180,7 @@ Ele expoe:
 
 - `createAppointment(input)` - cria um agendamento pendente
 - `getAppointmentsByDay(dataAgendamento)` - busca horarios pendentes ou confirmados de uma data
+- `listDentistAppointments()` - busca proximos agendamentos do dentista
 - `listPatientAppointments(clienteId)` - busca proximos agendamentos do paciente
 - `listAppointments()` - lista agendamentos e mapeia para o formato compartilhado de cards
 - `appointmentService.dentistaConfirmar(...)` - confirma um agendamento pelo fluxo do dentista
@@ -181,6 +191,7 @@ O hook `src/hooks/use-appointments.ts` usa TanStack Query e expoe:
 - `useAppointments()`
 - `useAppointment(appointmentId)`
 - `useAppointmentsByDay(date)`
+- `useDentistAppointments()`
 - `usePatientAppointments(patientId)`
 - `useCreateAppointment()`
 
