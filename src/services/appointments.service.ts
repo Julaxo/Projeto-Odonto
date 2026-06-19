@@ -6,10 +6,10 @@ import {
   getDocs,
   orderBy,
   query,
-  type DocumentData,
-  type QueryDocumentSnapshot,
   updateDoc,
   where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 
 import {
@@ -172,6 +172,19 @@ class AppointmentService {
     return snapshot.docs.map(mapSnapshot).sort(sortByDateTime);
   }
 
+  async buscarAgendamentosPosterioresDentista(): Promise<AgendamentoData[]> {
+    const hojeString = new Date().toISOString().split("T")[0];
+    const q = query(
+      this.getCollectionRef(),
+      where("dataAgendamento", ">=", hojeString),
+      where("status", "in", ACTIVE_STATUSES),
+      orderBy("dataAgendamento", "asc"),
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(mapSnapshot).sort(sortByDateTime);
+  }
+
   async dentistaConfirmar(
     agendamentoId: string,
     duracaoMinutos: number,
@@ -220,6 +233,12 @@ export async function listPatientAppointments(
   clienteId: string,
 ): Promise<AgendamentoData[]> {
   return appointmentService.buscarAgendamentosPosteriores(clienteId);
+}
+
+export async function listPatientAppointmentsDentist(
+  clienteId: string,
+): Promise<AgendamentoData[]> {
+  return appointmentService.buscarAgendamentosPosterioresDentista();
 }
 
 export async function listAppointments(): Promise<Appointment[]> {
