@@ -8,7 +8,8 @@ import {
   Clock3,
   Settings,
 } from 'lucide-react-native';
-import { Controller, useForm } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -16,12 +17,16 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { useAppointmentsByDay, useCreateAppointment } from '@/hooks/use-appointments';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth.store';
 
 type CalendarDay = {
+  date: string;
   day: string;
   id: string;
-  isMuted?: boolean;
+  isMuted: boolean;
+  isPast: boolean;
 };
 
 type TimeSlot = {
@@ -30,52 +35,14 @@ type TimeSlot = {
 };
 
 const requestAppointmentSchema = z.object({
-  day: z.string().min(1),
+  date: z.string().min(1, 'Selecione uma data.'),
   description: z.string().max(300, 'Use no maximo 300 caracteres.').optional(),
-  slot: z.string().min(1),
+  slot: z.string().min(1, 'Selecione um horario.'),
 });
 
 type RequestAppointmentFormValues = z.infer<typeof requestAppointmentSchema>;
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-
-const calendarDays: CalendarDay[] = [
-  { day: '29', id: 'prev-29', isMuted: true },
-  { day: '30', id: 'prev-30', isMuted: true },
-  { day: '31', id: 'prev-31', isMuted: true },
-  { day: '1', id: 'nov-01' },
-  { day: '2', id: 'nov-02' },
-  { day: '3', id: 'nov-03' },
-  { day: '4', id: 'nov-04' },
-  { day: '5', id: 'nov-05' },
-  { day: '6', id: 'nov-06' },
-  { day: '7', id: 'nov-07' },
-  { day: '8', id: 'nov-08' },
-  { day: '9', id: 'nov-09' },
-  { day: '10', id: 'nov-10' },
-  { day: '11', id: 'nov-11' },
-  { day: '12', id: 'nov-12' },
-  { day: '13', id: 'nov-13' },
-  { day: '14', id: 'nov-14' },
-  { day: '15', id: 'nov-15' },
-  { day: '16', id: 'nov-16' },
-  { day: '17', id: 'nov-17' },
-  { day: '18', id: 'nov-18' },
-  { day: '19', id: 'nov-19' },
-  { day: '20', id: 'nov-20' },
-  { day: '21', id: 'nov-21' },
-  { day: '22', id: 'nov-22' },
-  { day: '23', id: 'nov-23' },
-  { day: '24', id: 'nov-24' },
-  { day: '25', id: 'nov-25' },
-  { day: '26', id: 'nov-26' },
-  { day: '27', id: 'nov-27' },
-  { day: '28', id: 'nov-28' },
-  { day: '29', id: 'nov-29' },
-  { day: '30', id: 'nov-30' },
-  { day: '1', id: 'next-01', isMuted: true },
-  { day: '2', id: 'next-02', isMuted: true },
-];
 
 const timeSlots: TimeSlot[] = [
   { id: '09:00', label: '09:00' },
@@ -89,6 +56,57 @@ const timeSlots: TimeSlot[] = [
   { id: '15:30', label: '15:30' },
   { id: '16:00', label: '16:00' },
 ];
+
+function normalizeDate(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addMinutes(time: string, minutesToAdd: number) {
+  const [hours, minutes] = time.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + minutesToAdd;
+  const nextHours = Math.floor(totalMinutes / 60);
+  const nextMinutes = totalMinutes % 60;
+
+  return `${String(nextHours).padStart(2, '0')}:${String(nextMinutes).padStart(2, '0')}`;
+}
+
+function getMonthLabel(date: Date) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function getCalendarDays(monthDate: Date): CalendarDay[] {
+  const today = normalizeDate(new Date());
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(firstDay.getDate() - firstDay.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    const normalizedDate = normalizeDate(date);
+    const dateKey = formatDateKey(date);
+
+    return {
+      date: dateKey,
+      day: String(date.getDate()),
+      id: dateKey,
+      isMuted: date.getMonth() !== month,
+      isPast: normalizedDate < today,
+    };
+  });
+}
 
 function BrandHeader() {
   return (
@@ -138,11 +156,17 @@ function SectionHeader({
 }
 
 function CalendarPicker({
-  onSelectDay,
-  selectedDay,
+  calendarDays,
+  monthDate,
+  onChangeMonth,
+  onSelectDate,
+  selectedDate,
 }: {
-  onSelectDay: (day: string) => void;
-  selectedDay: string;
+  calendarDays: CalendarDay[];
+  monthDate: Date;
+  onChangeMonth: (direction: 'next' | 'previous') => void;
+  onSelectDate: (date: string) => void;
+  selectedDate: string;
 }) {
   return (
     <View className="gap-3 rounded-2xl bg-card p-3 shadow-sm shadow-black/5">
@@ -157,14 +181,16 @@ function CalendarPicker({
           accessibilityLabel="Mes anterior"
           accessibilityRole="button"
           className="h-8 w-8 items-center justify-center rounded-full"
+          onPress={() => onChangeMonth('previous')}
         >
           <ChevronLeft color="#1e3a5f" size={18} />
         </TouchableOpacity>
-        <Text className="text-sm font-bold text-foreground">Novembro 2023</Text>
+        <Text className="text-sm font-bold capitalize text-foreground">{getMonthLabel(monthDate)}</Text>
         <TouchableOpacity
           accessibilityLabel="Proximo mes"
           accessibilityRole="button"
           className="h-8 w-8 items-center justify-center rounded-full"
+          onPress={() => onChangeMonth('next')}
         >
           <ChevronRight color="#1e3a5f" size={18} />
         </TouchableOpacity>
@@ -180,16 +206,17 @@ function CalendarPicker({
 
       <View className="flex-row flex-wrap">
         {calendarDays.map((calendarDay) => {
-          const isSelected = calendarDay.day === selectedDay && !calendarDay.isMuted;
+          const isSelected = calendarDay.date === selectedDate;
+          const isDisabled = calendarDay.isMuted || calendarDay.isPast;
 
           return (
             <TouchableOpacity
               accessibilityLabel={`Selecionar dia ${calendarDay.day}`}
               accessibilityRole="button"
               className="w-[14.285%] items-center py-1"
-              disabled={calendarDay.isMuted}
+              disabled={isDisabled}
               key={calendarDay.id}
-              onPress={() => onSelectDay(calendarDay.day)}
+              onPress={() => onSelectDate(calendarDay.date)}
             >
               <View
                 className={cn(
@@ -201,7 +228,7 @@ function CalendarPicker({
                   className={cn(
                     'text-xs font-semibold',
                     isSelected ? 'text-white' : 'text-foreground',
-                    calendarDay.isMuted && 'text-muted-foreground/40',
+                    isDisabled && 'text-muted-foreground/40',
                   )}
                 >
                   {calendarDay.day}
@@ -227,16 +254,20 @@ function CalendarPicker({
 }
 
 function TimeSlotPicker({
+  isLoading,
+  occupiedSlots,
   onSelectSlot,
   selectedSlot,
 }: {
+  isLoading: boolean;
+  occupiedSlots: Set<string>;
   onSelectSlot: (slot: string) => void;
   selectedSlot: string;
 }) {
   return (
     <View className="gap-3 rounded-2xl bg-card p-3 shadow-sm shadow-black/5">
       <SectionHeader
-        description="Escolha um horario disponivel para o dia selecionado."
+        description="Horarios ocupados para esta data ficam indisponiveis."
         icon="clock"
         title="Selecione o Horario"
       />
@@ -244,19 +275,30 @@ function TimeSlotPicker({
       <View className="flex-row flex-wrap gap-2">
         {timeSlots.map((slot) => {
           const isSelected = slot.id === selectedSlot;
+          const isOccupied = occupiedSlots.has(slot.id);
 
           return (
             <TouchableOpacity
-              accessibilityLabel={`Selecionar horario ${slot.label}`}
+              accessibilityLabel={
+                isOccupied ? `Horario ${slot.label} indisponivel` : `Selecionar horario ${slot.label}`
+              }
               accessibilityRole="button"
               className={cn(
                 'h-9 min-w-[58px] flex-1 basis-[28%] items-center justify-center rounded-lg border',
                 isSelected ? 'border-blue-900 bg-blue-900 dark:bg-blue-700' : 'border-border bg-background',
+                isOccupied && 'border-zinc-200 bg-zinc-100 opacity-60 dark:bg-zinc-900',
               )}
+              disabled={isOccupied || isLoading}
               key={slot.id}
               onPress={() => onSelectSlot(slot.id)}
             >
-              <Text className={cn('text-xs font-bold', isSelected ? 'text-white' : 'text-foreground')}>
+              <Text
+                className={cn(
+                  'text-xs font-bold',
+                  isSelected ? 'text-white' : 'text-foreground',
+                  isOccupied && 'text-muted-foreground',
+                )}
+              >
                 {slot.label}
               </Text>
             </TouchableOpacity>
@@ -268,17 +310,66 @@ function TimeSlotPicker({
 }
 
 export function RequestAppointmentScreen() {
-  const { control, handleSubmit } = useForm<RequestAppointmentFormValues>({
+  const user = useAuthStore((state) => state.user);
+  const today = useMemo(() => normalizeDate(new Date()), []);
+  const tomorrow = useMemo(() => {
+    const nextDate = new Date(today);
+    nextDate.setDate(today.getDate() + 1);
+    return nextDate;
+  }, [today]);
+  const [monthDate, setMonthDate] = useState(() => new Date(tomorrow.getFullYear(), tomorrow.getMonth(), 1));
+  const createAppointmentMutation = useCreateAppointment();
+
+  const { control, handleSubmit, setValue } = useForm<RequestAppointmentFormValues>({
     defaultValues: {
-      day: '15',
+      date: formatDateKey(tomorrow),
       description: '',
-      slot: '10:00',
+      slot: '09:00',
     },
     resolver: zodResolver(requestAppointmentSchema),
   });
 
-  function handleRequestAppointment() {
-    router.push('/appointments/details');
+  const selectedDate = useWatch({ control, name: 'date' });
+  const selectedSlot = useWatch({ control, name: 'slot' });
+  const appointmentsByDayQuery = useAppointmentsByDay(selectedDate);
+  const calendarDays = useMemo(() => getCalendarDays(monthDate), [monthDate]);
+  const occupiedSlots = useMemo(
+    () => new Set((appointmentsByDayQuery.data ?? []).map((appointment) => appointment.horarioInicio)),
+    [appointmentsByDayQuery.data],
+  );
+  const isSelectedSlotOccupied = occupiedSlots.has(selectedSlot);
+  const errorMessage = createAppointmentMutation.error
+    ? 'Nao foi possivel solicitar o atendimento. Tente novamente.'
+    : null;
+
+  function handleChangeMonth(direction: 'next' | 'previous') {
+    setMonthDate((current) => {
+      const nextMonth = new Date(current);
+      nextMonth.setMonth(current.getMonth() + (direction === 'next' ? 1 : -1));
+      return nextMonth;
+    });
+  }
+
+  async function handleRequestAppointment(values: RequestAppointmentFormValues) {
+    if (occupiedSlots.has(values.slot)) {
+      return;
+    }
+
+    const description = values.description?.trim();
+    const appointmentId = await createAppointmentMutation.mutateAsync({
+      clienteId: user?.id ?? 'paciente-sem-identificacao',
+      clienteNome: user?.name ?? 'Paciente',
+      dataAgendamento: values.date,
+      duracaoMinutos: 30,
+      horarioFim: addMinutes(values.slot, 30),
+      horarioInicio: values.slot,
+      observacoes: description,
+      procedimento: description || 'Atendimento odontologico',
+      profissionalId: 'dentista-padrao',
+      profissionalNome: 'Equipe OdontoLuma',
+    });
+
+    router.replace({ pathname: '/appointments/details', params: { id: appointmentId } });
   }
 
   return (
@@ -295,9 +386,15 @@ export function RequestAppointmentScreen() {
         <View className="mt-4 gap-3">
           <Controller
             control={control}
-            name="day"
+            name="date"
             render={({ field: { onChange, value } }) => (
-              <CalendarPicker onSelectDay={onChange} selectedDay={value} />
+              <CalendarPicker
+                calendarDays={calendarDays}
+                monthDate={monthDate}
+                onChangeMonth={handleChangeMonth}
+                onSelectDate={onChange}
+                selectedDate={value}
+              />
             )}
           />
 
@@ -305,9 +402,23 @@ export function RequestAppointmentScreen() {
             control={control}
             name="slot"
             render={({ field: { onChange, value } }) => (
-              <TimeSlotPicker onSelectSlot={onChange} selectedSlot={value} />
+              <TimeSlotPicker
+                isLoading={appointmentsByDayQuery.isLoading}
+                occupiedSlots={occupiedSlots}
+                onSelectSlot={(slot) => {
+                  setValue('slot', slot, { shouldValidate: true });
+                  onChange(slot);
+                }}
+                selectedSlot={value}
+              />
             )}
           />
+
+          {isSelectedSlotOccupied ? (
+            <Text className="text-xs font-semibold text-destructive">
+              Este horario ja foi usado para a data selecionada.
+            </Text>
+          ) : null}
 
           <Controller
             control={control}
@@ -327,14 +438,19 @@ export function RequestAppointmentScreen() {
             )}
           />
 
+          {errorMessage ? <Text className="text-xs font-semibold text-destructive">{errorMessage}</Text> : null}
+
           <Button
             accessibilityLabel="Solicitar atendimento"
             className="mt-1 h-14 rounded-xl bg-blue-900 dark:bg-blue-700"
+            disabled={createAppointmentMutation.isPending || isSelectedSlotOccupied}
             onPress={handleSubmit(handleRequestAppointment)}
           >
             <View className="flex-row items-center gap-2">
               <CheckCircle2 color="#ffffff" size={18} />
-              <Text className="text-sm font-bold text-white">Solicitar atendimento</Text>
+              <Text className="text-sm font-bold text-white">
+                {createAppointmentMutation.isPending ? 'Solicitando...' : 'Solicitar atendimento'}
+              </Text>
             </View>
           </Button>
         </View>

@@ -9,14 +9,16 @@ import {
   type LoginCredentials,
 } from '@/services/firebase-auth.service';
 import { hasFirebaseConfig } from '@/services/firebase';
-import { useAuthStore } from '@/store/auth.store';
+import { type UserRole, useAuthStore } from '@/store/auth.store';
 
 type AuthContextValue = {
   errorMessage: string | null;
   isAuthenticated: boolean;
   isFirebaseConfigured: boolean;
   isLoading: boolean;
-  signIn: (credentials: LoginCredentials) => Promise<void>;
+  role: UserRole;
+  setRole: (role: UserRole) => void;
+  signIn: (credentials: LoginCredentials, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   user: FirebaseAuthUser | null;
 };
@@ -24,6 +26,8 @@ type AuthContextValue = {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const role = useAuthStore((state) => state.role);
+  const setRole = useAuthStore((state) => state.setRole);
   const storeSignIn = useAuthStore((state) => state.signIn);
   const storeSignOut = useAuthStore((state) => state.signOut);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -50,14 +54,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return unsubscribe;
   }, [storeSignIn, storeSignOut]);
 
-  const signIn = useCallback(async (credentials: LoginCredentials) => {
+  const signIn = useCallback(async (credentials: LoginCredentials, selectedRole?: UserRole) => {
     setErrorMessage(null);
     setIsLoading(true);
 
     try {
       const firebaseUser = await loginWithFirebase(credentials);
       setUser(firebaseUser);
-      storeSignIn(firebaseUser);
+      storeSignIn(firebaseUser, selectedRole);
     } catch (error) {
       const message = getFirebaseAuthErrorMessage(error);
       setErrorMessage(message);
@@ -89,11 +93,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthenticated: Boolean(user),
       isFirebaseConfigured: hasFirebaseConfig,
       isLoading,
+      role,
+      setRole,
       signIn,
       signOut,
       user,
     }),
-    [errorMessage, isLoading, signIn, signOut, user],
+    [errorMessage, isLoading, role, setRole, signIn, signOut, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

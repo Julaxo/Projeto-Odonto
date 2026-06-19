@@ -2,7 +2,7 @@
 
 Aplicativo mobile para pacientes de uma clinica odontologica, construido com Expo, React Native, Expo Router e TypeScript.
 
-O estado atual do app possui home do paciente, agenda do paciente, solicitacao de atendimento, detalhes do agendamento sugerido, alertas, perfil, tela de login, configuracoes, tema claro/escuro, componentes reutilizaveis e estrutura preparada para consumo de API.
+O estado atual do app possui home do paciente, agenda do paciente, solicitacao de atendimento integrada ao Firestore, telas do dentista, login com escolha de perfil, configuracoes, tema claro/escuro e componentes reutilizaveis.
 
 ## Stack
 
@@ -29,7 +29,9 @@ O estado atual do app possui home do paciente, agenda do paciente, solicitacao d
 src/
 |-- app/
 |   |-- (auth)/
+|   |-- (dentist)/
 |   |-- (tabs)/
+|   |-- appointments/
 |   |-- profile/
 |   `-- settings/
 |-- components/
@@ -39,6 +41,7 @@ src/
 |-- features/
 |   |-- appointments/
 |   |-- auth/
+|   |-- dentist/
 |   `-- dashboard/
 |-- hooks/
 |-- lib/
@@ -51,22 +54,30 @@ src/
 
 As rotas sao gerenciadas pelo Expo Router em `src/app`.
 
-- `/(tabs)` - grupo principal com navegacao por abas protegida por autenticacao
+- `/(tabs)` - grupo principal do paciente com navegacao por abas protegida por autenticacao
+- `/(dentist)` - grupo de telas do dentista protegido por autenticacao e perfil `dentist`
 - `/(tabs)/index` - home do paciente com proxima consulta, CTA de solicitacao e acesso rapido
 - `/(tabs)/appointments` - tela Schedule com Minha Agenda, proximas consultas e historico
 - `/(tabs)/appointments-history` - rota oculta da tab bar para exibir o Historico dentro do fluxo Schedule
 - `/(tabs)/alerts` - tela de alertas do paciente
 - `/(tabs)/profile` - perfil do paciente na navegacao por abas
-- `/appointments/new` - solicitacao de atendimento com data, horario e descricao
+- `/(dentist)/index` - home do dentista com resumo de solicitacoes e proximo atendimento
+- `/(dentist)/requests` - lista de solicitacoes pendentes do dentista
+- `/(dentist)/requests/[id]` - detalhes de uma solicitacao para confirmar ou recusar
+- `/(dentist)/agenda` - agenda do dentista
+- `/(dentist)/profile` - perfil do dentista
+- `/appointments/new` - solicitacao de atendimento com data, horario e descricao, criando agendamento pendente no Firestore
 - `/appointments/details` - detalhes do horario sugerido pela clinica, com confirmacao ou solicitacao de alteracao
 - `/(auth)/sign-in` - tela de acesso profissional
 - `/profile` - tela de perfil profissional existente
 - `/settings` - tela de configuracoes
 - `+not-found` - tela para rotas nao encontradas
 
-O layout raiz em `src/app/_layout.tsx` carrega a fonte `SpaceMono`, controla a splash screen, aplica o tema conforme o color scheme, registra os providers globais e inicia o app em `/(auth)/sign-in`.
+O layout raiz em `src/app/_layout.tsx` carrega a fonte `SpaceMono`, controla a splash screen, aplica o tema conforme o color scheme, registra os providers globais, registra os grupos `/(tabs)` e `/(dentist)` e inicia o app em `/(auth)/sign-in`.
 
-O layout de tabs em `src/app/(tabs)/_layout.tsx` verifica o `AuthProvider`: usuarios sem sessao sao redirecionados para `/(auth)/sign-in`, e usuarios autenticados acessam a navegacao principal.
+O layout de tabs em `src/app/(tabs)/_layout.tsx` verifica o `AuthProvider`: usuarios sem sessao sao redirecionados para `/(auth)/sign-in`, e usuarios com perfil `dentist` sao redirecionados para `/(dentist)`.
+
+O layout do dentista em `src/app/(dentist)/_layout.tsx` tambem verifica o `AuthProvider`: usuarios sem sessao voltam para o login, e usuarios com perfil `patient` sao redirecionados para `/(tabs)`.
 
 ## Componentes
 
@@ -101,7 +112,9 @@ Ela usa:
 
 - React Hook Form para controlar data, horario e descricao
 - Zod para validar campos obrigatorios e limite da descricao
-- Expo Router para navegar ate `/appointments/details` apos a solicitacao local
+- TanStack Query para consultar horarios ja ocupados na data selecionada
+- `appointmentService.solicitarAgendamento()` para criar um documento pendente na colecao `agendamentos`
+- Expo Router para navegar ate `/appointments/details` apos a solicitacao
 - Cores da home, com azul escuro para acoes principais e teal para identidade visual
 
 A tela de detalhes do agendamento sugerido fica em `src/features/appointments/components/appointment-details-screen.tsx` e e renderizada pela rota `/appointments/details`.
@@ -121,8 +134,9 @@ Ele usa:
 - Zod para validacao
 - Firebase Auth para login com email e senha
 - `AuthProvider` para manter o usuario autenticado no contexto da aplicacao
-- Zustand sincronizado pelo contexto para manter compatibilidade com telas existentes
-- Expo Router para redirecionar para `/(tabs)` apos login
+- Seletor de perfil para entrar como paciente ou dentista
+- Zustand sincronizado pelo contexto para armazenar usuario e perfil selecionado
+- Expo Router para redirecionar para `/(tabs)` ou `/(dentist)` apos login
 
 O contexto de autenticacao fica em `src/features/auth/context/auth-context.tsx`.
 
@@ -131,7 +145,7 @@ Hooks disponiveis:
 - `src/features/auth/hooks/use-auth.ts` - acesso ao usuario, status de autenticacao, login e logout
 - `src/features/auth/hooks/use-login.ts` - fluxo de login com loading e mensagem de erro
 
-No estado atual, o login usa Firebase Auth quando as variaveis `EXPO_PUBLIC_FIREBASE_*` estao configuradas. A solicitacao de atendimento ainda e local e nao chama backend real.
+No estado atual, o login usa Firebase Auth quando as variaveis `EXPO_PUBLIC_FIREBASE_*` estao configuradas. A solicitacao de atendimento grava os dados no Firestore pela service de agendamentos.
 
 ## Estado Global
 
@@ -140,36 +154,34 @@ O estado global usa Zustand em `src/store/auth.store.ts`.
 Estado disponivel:
 
 - `user`
-- `signIn(user)`
+- `role`
+- `setRole(role)`
+- `signIn(user, role?)`
 - `signOut()`
 
-O `AuthProvider` sincroniza o usuario do Firebase com essa store para preservar as telas que ja consomem `useAuthStore`.
+O `AuthProvider` sincroniza o usuario do Firebase com essa store e preserva o perfil selecionado no login para separar os fluxos de paciente e dentista.
 
-## Data Fetching e API
+## Data Fetching e Firestore
 
-O cliente HTTP fica em `src/services/api.ts` e usa Axios.
+O service de consultas fica em `src/services/appointments.service.ts` e usa o SDK do Firebase Firestore.
 
-A URL base e definida por:
+Ele expoe:
 
-```txt
-EXPO_PUBLIC_API_URL
-```
+- `createAppointment(input)` - cria um agendamento pendente
+- `getAppointmentsByDay(dataAgendamento)` - busca horarios pendentes ou confirmados de uma data
+- `listPatientAppointments(clienteId)` - busca proximos agendamentos do paciente
+- `listAppointments()` - lista agendamentos e mapeia para o formato compartilhado de cards
+- `appointmentService.dentistaConfirmar(...)` - confirma um agendamento pelo fluxo do dentista
+- `appointmentService.cancelarAgendamento(id)` - cancela um agendamento
 
-Se a variavel nao estiver definida, o fallback atual e:
+O hook `src/hooks/use-appointments.ts` usa TanStack Query e expoe:
 
-```txt
-http://localhost:3000
-```
+- `useAppointments()`
+- `useAppointmentsByDay(date)`
+- `usePatientAppointments(patientId)`
+- `useCreateAppointment()`
 
-O service de consultas fica em `src/services/appointments.service.ts` e expoe `listAppointments()`, que chama:
-
-```txt
-GET /appointments
-```
-
-O hook `src/hooks/use-appointments.ts` usa TanStack Query com a query key `appointments`.
-
-Observacao: as telas atuais usam dados locais/mockados. O service HTTP e o hook ja existem, mas ainda nao estao conectados a interface principal.
+Ao criar um agendamento, `useCreateAppointment()` invalida as queries de lista, paciente e data selecionada para manter a interface sincronizada.
 
 ## Firebase Auth
 
@@ -233,10 +245,9 @@ npm run lint
 
 ## Variaveis de Ambiente
 
-Crie um arquivo `.env.local` quando precisar apontar para uma API externa:
+Crie um arquivo `.env.local` com as credenciais publicas do Firebase usadas pelo Expo:
 
 ```txt
-EXPO_PUBLIC_API_URL=http://localhost:3000
 EXPO_PUBLIC_FIREBASE_API_KEY=...
 EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=...
 EXPO_PUBLIC_FIREBASE_PROJECT_ID=...

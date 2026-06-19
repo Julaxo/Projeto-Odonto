@@ -9,7 +9,7 @@ import { SignInForm } from '@/features/auth/components/sign-in-form';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 
 export default function SignInScreen() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
 
   if (isLoading) {
     return (
@@ -22,7 +22,7 @@ export default function SignInScreen() {
   }
 
   if (isAuthenticated) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href={role === 'dentist' ? '/(dentist)' : '/(tabs)'} />;
   }
 
   return (

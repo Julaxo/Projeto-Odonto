@@ -42,7 +42,7 @@ export function DentistHomeScreen() {
 
       {pendingAppointments.length > 0 ? (
         <Pressable
-          onPress={() => router.push({ pathname: '/(dentist)/requests/index' })}
+          onPress={() => router.push('/(dentist)/requests')}
           accessibilityRole="button"
           accessibilityLabel={`Ver ${pendingAppointments.length} solicitações aguardando confirmação`}
         >
@@ -84,7 +84,7 @@ export function DentistHomeScreen() {
       <Button
         accessibilityLabel="Ver solicitações de agendamento"
         label="Ver solicitações"
-        onPress={() => router.push({ pathname: '/(dentist)/requests/index' })}
+        onPress={() => router.push('/(dentist)/requests')}
       >
         <View className="flex-row items-center gap-2">
           <ClipboardList color={colors.background} size={18} />

@@ -9,12 +9,14 @@ type AppointmentCardProps = {
 };
 
 const statusLabel: Record<AppointmentStatus, string> = {
+  cancelled: 'Cancelada',
   completed: 'Finalizada',
   confirmed: 'Confirmada',
   pending: 'Pendente',
 };
 
 const statusClassName: Record<AppointmentStatus, string> = {
+  cancelled: 'bg-destructive text-destructive-foreground',
   completed: 'bg-secondary text-secondary-foreground',
   confirmed: 'bg-accent text-accent-foreground',
   pending: 'bg-muted text-muted-foreground',

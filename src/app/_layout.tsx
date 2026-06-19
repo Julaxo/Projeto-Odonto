@@ -50,6 +50,7 @@ function RootLayoutNav() {
       <AppProviders>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(dentist)" />
           <Stack.Screen name="(auth)/sign-in" />
           <Stack.Screen name="appointments/details" />
           <Stack.Screen name="appointments/new" />

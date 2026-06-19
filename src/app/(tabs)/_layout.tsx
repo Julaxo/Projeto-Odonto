@@ -7,7 +7,7 @@ import { NAV_THEME } from '@/constants/theme';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 
 export default function TabLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
@@ -21,6 +21,10 @@ export default function TabLayout() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  if (role === 'dentist') {
+    return <Redirect href="/(dentist)" />;
   }
 
   return (

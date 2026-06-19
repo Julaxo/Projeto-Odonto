@@ -1,26 +1,27 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { router } from "expo-router";
-import { Controller, useForm } from "react-hook-form";
-import { Pressable, View } from "react-native";
-import { z } from "zod";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { Pressable, View } from 'react-native';
+import { z } from 'zod';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
-import { useLogin } from "@/features/auth/hooks/use-login";
-import { useState } from "react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
+import { useLogin } from '@/features/auth/hooks/use-login';
+import { type UserRole, useAuthStore } from '@/store/auth.store';
 
 const signInSchema = z.object({
-  email: z.email("Informe um email valido."),
-  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
+  email: z.email('Informe um email valido.'),
+  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
 
 type SignInFormData = z.infer<typeof signInSchema>;
-type NavigationRole = "patient" | "dentist";
 
 export function SignInForm() {
   const { login, isLoading, errorMessage, isFirebaseConfigured } = useLogin();
-  const [role, setRole] = useState<NavigationRole>("patient");
+  const setAuthRole = useAuthStore((state) => state.setRole);
+  const [role, setRole] = useState<UserRole>('patient');
 
   const {
     control,
@@ -29,14 +30,15 @@ export function SignInForm() {
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
   });
 
   async function handleValidSubmit(data: SignInFormData) {
-    await login(data);
-    router.replace(role === "dentist" ? "./(dentist)" : "./(tabs)");
+    setAuthRole(role);
+    await login(data, role);
+    router.replace(role === 'dentist' ? '/(dentist)' : '/(tabs)');
   }
 
   return (
@@ -57,42 +59,48 @@ export function SignInForm() {
         <Text className="text-sm text-muted-foreground">Entrar como</Text>
         <View className="flex-row gap-2">
           <Pressable
-            onPress={() => setRole("patient")}
+            onPress={() => {
+              setRole('patient');
+              setAuthRole('patient');
+            }}
             accessibilityRole="radio"
-            accessibilityState={{ selected: role === "patient" }}
+            accessibilityState={{ selected: role === 'patient' }}
             accessibilityLabel="Entrar como paciente"
             className={`flex-1 items-center rounded-md border p-3 ${
-              role === "patient"
-                ? "border-blue-900 bg-blue-900/10 dark:border-blue-700 dark:bg-blue-700/10"
-                : "border-border"
+              role === 'patient'
+                ? 'border-blue-900 bg-blue-900/10 dark:border-blue-700 dark:bg-blue-700/10'
+                : 'border-border'
             }`}
           >
             <Text
               className={
-                role === "patient"
-                  ? "text-sm font-medium text-blue-900 dark:text-blue-300"
-                  : "text-sm"
+                role === 'patient'
+                  ? 'text-sm font-medium text-blue-900 dark:text-blue-300'
+                  : 'text-sm'
               }
             >
               Paciente
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => setRole("dentist")}
+            onPress={() => {
+              setRole('dentist');
+              setAuthRole('dentist');
+            }}
             accessibilityRole="radio"
-            accessibilityState={{ selected: role === "dentist" }}
+            accessibilityState={{ selected: role === 'dentist' }}
             accessibilityLabel="Entrar como dentista"
             className={`flex-1 items-center rounded-md border p-3 ${
-              role === "dentist"
-                ? "border-blue-900 bg-blue-900/10 dark:border-blue-700 dark:bg-blue-700/10"
-                : "border-border"
+              role === 'dentist'
+                ? 'border-blue-900 bg-blue-900/10 dark:border-blue-700 dark:bg-blue-700/10'
+                : 'border-border'
             }`}
           >
             <Text
               className={
-                role === "dentist"
-                  ? "text-sm font-medium text-blue-900 dark:text-blue-300"
-                  : "text-sm"
+                role === 'dentist'
+                  ? 'text-sm font-medium text-blue-900 dark:text-blue-300'
+                  : 'text-sm'
               }
             >
               Dentista

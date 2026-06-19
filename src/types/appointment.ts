@@ -1,22 +1,33 @@
-export type AgendamentoStatus = "PENDENTE" | "CONFIRMADO" | "CANCELADO";
+export type AgendamentoStatus = 'PENDENTE' | 'CONFIRMADO' | 'CANCELADO';
+
+export type AppointmentStatus = 'cancelled' | 'completed' | 'confirmed' | 'pending';
 
 export interface AgendamentoInput {
   clienteId: string;
+  clienteNome?: string;
+  dataAgendamento: string;
+  duracaoMinutos: number;
+  horarioFim: string;
+  horarioInicio: string;
+  observacoes?: string;
+  procedimento: string;
   profissionalId: string;
-  dataAgendamento: string; // Ex: "2026-06-17"
-  horaInicio: string; // Ex: "09:00"
-  horarioFim: string; // Ex: "09:30"
-  duracaoMinutos: number; // Ex: 60
+  profissionalNome?: string;
 }
 
-export interface AgendamentoData {
-  id: string;
-  clienteId: string;
-  dataAgendamento: string;
-  horarioInicio: string;
-  horarioFim: string;
-  duracaoMinutos: number;
-  status: AgendamentoStatus;
+export interface AgendamentoData extends AgendamentoInput {
   criadoEm: string;
+  id: string;
+  status: AgendamentoStatus;
   ultimaAtualizacao: string;
 }
+
+export type Appointment = {
+  dentistName?: string;
+  endsAt?: string;
+  id: string;
+  patientName: string;
+  procedure: string;
+  startsAt: string;
+  status: AppointmentStatus;
+};

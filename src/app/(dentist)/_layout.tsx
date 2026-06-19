@@ -1,29 +1,26 @@
-import { Redirect, Tabs } from "expo-router";
-import { CalendarDays, ClipboardList, Home, User } from "lucide-react-native";
+import { Redirect, Tabs } from 'expo-router';
+import { CalendarDays, ClipboardList, Home, User } from 'lucide-react-native';
+import { ActivityIndicator, View } from 'react-native';
 
-import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
-/**
- * Layout de tabs para o fluxo "dentista". Espelha
- * `src/app/(tabs)/_layout.tsx`: usuários sem sessão vão para o login.
- *
- * IMPORTANTE: `FirebaseAuthUser` (ver `firebase-auth.service.ts`) não tem
- * um campo de perfil/role — é só `{ email, id, name }`. Por isso este
- * layout não tenta distinguir "dentista" de "paciente" pelo usuário
- * autenticado; ele confia que o usuário só chega em `/(dentist)` porque
- * escolheu "Dentista" na tela de login (ver `sign-in-form.REFERENCE.tsx`).
- *
- * Se no futuro for necessário um gate real (ex: impedir um paciente de
- * navegar manualmente para `/(dentist)` digitando a URL, ou restaurar a
- * escolha após reabrir o app), será preciso persistir esse dado em algum
- * lugar associado ao `uid` (ex: Firestore, ou um campo extra salvo junto
- * com `useAuthStore`), já que o Firebase Auth puro não guarda isso.
- */
 export default function DentistTabsLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator color="#1e3a5f" />
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  if (role !== 'dentist') {
+    return <Redirect href="/(tabs)" />;
   }
 
   return (
@@ -31,37 +28,33 @@ export default function DentistTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          tabBarAccessibilityLabel: 'Home',
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-          tabBarAccessibilityLabel: "Home",
+          title: 'Home',
         }}
       />
       <Tabs.Screen
         name="requests/index"
         options={{
-          title: "Solicitações",
-          tabBarIcon: ({ color, size }) => (
-            <ClipboardList color={color} size={size} />
-          ),
-          tabBarAccessibilityLabel: "Solicitações",
+          tabBarAccessibilityLabel: 'Solicitacoes',
+          tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} />,
+          title: 'Solicitacoes',
         }}
       />
       <Tabs.Screen
         name="agenda"
         options={{
-          title: "Agenda",
-          tabBarIcon: ({ color, size }) => (
-            <CalendarDays color={color} size={size} />
-          ),
-          tabBarAccessibilityLabel: "Minha agenda",
+          tabBarAccessibilityLabel: 'Minha agenda',
+          tabBarIcon: ({ color, size }) => <CalendarDays color={color} size={size} />,
+          title: 'Agenda',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Perfil",
+          tabBarAccessibilityLabel: 'Perfil',
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-          tabBarAccessibilityLabel: "Perfil",
+          title: 'Perfil',
         }}
       />
       <Tabs.Screen
