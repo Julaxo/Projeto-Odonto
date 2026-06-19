@@ -1,6 +1,7 @@
 import { RefreshCw } from 'lucide-react-native';
-import { useMemo } from 'react';
-import { ActivityIndicator, SectionList, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Pressable, SectionList, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,9 @@ import { useDentistAppointments } from '@/hooks/use-appointments';
 import { useAuthStore } from '@/store/auth.store';
 import { type AgendamentoData } from '@/types/appointment';
 import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
+import { cn } from '@/lib/utils';
+
+type AgendaTab = 'history' | 'upcoming';
 
 const MONTH_LABELS = [
   'JANEIRO',
@@ -30,6 +34,11 @@ interface MonthSection {
   data: DentistAppointment[];
   title: string;
 }
+
+const agendaTabs: { label: string; value: AgendaTab }[] = [
+  { label: 'Proximas', value: 'upcoming' },
+  { label: 'Historico', value: 'history' },
+];
 
 function mapStatus(status: AgendamentoData['status']): AppointmentStatus {
   if (status === 'CONFIRMADO') {
@@ -76,12 +85,23 @@ function groupByMonth(appointments: DentistAppointment[]): MonthSection[] {
 export function DentistAgendaScreen() {
   const colors = useThemeColors();
   const dentistId = useAuthStore((state) => state.user?.id);
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [selectedTab, setSelectedTab] = useState<AgendaTab>(() => (tab === 'history' ? 'history' : 'upcoming'));
   const appointmentsQuery = useDentistAppointments(dentistId);
   const appointments = useMemo(
     () => (appointmentsQuery.data ?? []).map(toDentistAppointment),
     [appointmentsQuery.data],
   );
-  const sections = useMemo(() => groupByMonth(appointments), [appointments]);
+  const filteredAppointments = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (selectedTab === 'history') {
+      return appointments.filter((appointment) => appointment.date < today);
+    }
+
+    return appointments.filter((appointment) => appointment.date >= today);
+  }, [appointments, selectedTab]);
+  const sections = useMemo(() => groupByMonth(filteredAppointments), [filteredAppointments]);
   const isRefreshing = appointmentsQuery.isFetching && !appointmentsQuery.isLoading;
 
   async function handleRefreshAppointments() {
@@ -117,6 +137,26 @@ export function DentistAgendaScreen() {
         </Button>
       </View>
 
+      <View className="mb-4 flex-row rounded-xl bg-blue-50 p-1 dark:bg-blue-950/30">
+        {agendaTabs.map((tab) => {
+          const isSelected = selectedTab === tab.value;
+
+          return (
+            <Pressable
+              accessibilityLabel={`Ver ${tab.label.toLowerCase()}`}
+              accessibilityRole="button"
+              className={cn('h-11 flex-1 items-center justify-center rounded-lg', isSelected && 'bg-card shadow-sm')}
+              key={tab.value}
+              onPress={() => setSelectedTab(tab.value)}
+            >
+              <Text className={cn('text-sm font-bold', isSelected ? 'text-blue-900 dark:text-blue-300' : 'text-foreground')}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {appointmentsQuery.error ? (
         <View className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
           <Text className="text-sm font-medium text-destructive">
@@ -134,7 +174,11 @@ export function DentistAgendaScreen() {
         <SectionList
           ListEmptyComponent={
             <Card>
-              <Text className="text-sm text-muted-foreground">Nenhuma consulta encontrada.</Text>
+              <Text className="text-sm text-muted-foreground">
+                {selectedTab === 'history'
+                  ? 'Nenhum historico encontrado.'
+                  : 'Nenhuma consulta encontrada.'}
+              </Text>
             </Card>
           }
           keyExtractor={(item) => item.id}

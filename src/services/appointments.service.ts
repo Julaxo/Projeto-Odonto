@@ -175,17 +175,18 @@ class AppointmentService {
     return snapshot.docs.map(mapSnapshot).sort(sortByDateTime);
   }
 
-  async buscarAgendamentosPosterioresDentista(): Promise<AgendamentoData[]> {
-    const hojeString = new Date().toISOString().split("T")[0];
+  async buscarAgendamentosDentista(): Promise<AgendamentoData[]> {
     const q = query(
       this.getCollectionRef(),
-      where("dataAgendamento", ">=", hojeString),
       where("status", "in", ACTIVE_STATUSES),
-      orderBy("dataAgendamento", "asc"),
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(mapSnapshot).sort(sortByDateTime);
+    const appointments = snapshot.docs.map(mapSnapshot).sort(sortByDateTime);
+
+    console.log("[Minha agenda dentista] resposta do banco:", appointments);
+
+    return appointments;
   }
 
   async dentistaConfirmar(
@@ -249,7 +250,7 @@ export async function listPatientAppointmentsDentist(
 ): Promise<AgendamentoData[]> {
   void clienteId;
 
-  return appointmentService.buscarAgendamentosPosterioresDentista();
+  return appointmentService.buscarAgendamentosDentista();
 }
 
 export async function listAppointments(): Promise<Appointment[]> {

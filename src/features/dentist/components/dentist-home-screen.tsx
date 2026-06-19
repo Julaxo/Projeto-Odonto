@@ -149,10 +149,14 @@ export function DentistHomeScreen() {
           </Button>
         </View>
         <View className="flex-1">
-          <Button accessibilityLabel="Ver histórico de atendimentos" variant="outline">
+          <Button
+            accessibilityLabel="Ver historico de atendimentos"
+            onPress={() => router.push({ pathname: '/(dentist)/agenda', params: { tab: 'history' } })}
+            variant="outline"
+          >
             <View className="flex-row items-center gap-2">
               <History color={colors.text} size={16} />
-              <Text className="text-sm text-foreground">Histórico</Text>
+              <Text className="text-sm text-foreground">Historico</Text>
             </View>
           </Button>
         </View>

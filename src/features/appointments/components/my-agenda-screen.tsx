@@ -1,16 +1,19 @@
-import { RefreshCw, Settings, UserRound } from 'lucide-react-native';
-import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { RefreshCw, Settings, UserRound } from "lucide-react-native";
+import { useMemo } from "react";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { usePatientAppointments } from '@/hooks/use-appointments';
-import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth.store';
-import { type AgendamentoData, type AgendamentoStatus } from '@/types/appointment';
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { usePatientAppointments } from "@/hooks/use-appointments";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
+import {
+  type AgendamentoData,
+  type AgendamentoStatus,
+} from "@/types/appointment";
 
-type AgendaStatus = 'cancelled' | 'confirmed' | 'pending';
+type AgendaStatus = "cancelled" | "confirmed" | "pending";
 
 type AgendaAppointment = {
   day: string;
@@ -28,7 +31,7 @@ type AgendaSection = {
   title: string;
 };
 
-type AgendaTab = 'upcoming' | 'history';
+type AgendaTab = "upcoming" | "history";
 
 type MyAgendaScreenProps = {
   onOpenAppointmentDetails: (appointmentId: string) => void;
@@ -38,51 +41,61 @@ type MyAgendaScreenProps = {
 };
 
 const agendaTabs: { label: string; value: AgendaTab }[] = [
-  { label: 'Proximas', value: 'upcoming' },
-  { label: 'Historico', value: 'history' },
+  { label: "Proximas", value: "upcoming" },
+  { label: "Historico", value: "history" },
 ];
 
-const statusStyles: Record<AgendaStatus, { className: string; dotClassName: string; label: string; textClassName: string }> = {
+const statusStyles: Record<
+  AgendaStatus,
+  {
+    className: string;
+    dotClassName: string;
+    label: string;
+    textClassName: string;
+  }
+> = {
   cancelled: {
-    className: 'bg-red-100 dark:bg-red-950',
-    dotClassName: 'bg-red-600',
-    label: 'Cancelada',
-    textClassName: 'text-red-700 dark:text-red-300',
+    className: "bg-red-100 dark:bg-red-950",
+    dotClassName: "bg-red-600",
+    label: "Cancelada",
+    textClassName: "text-red-700 dark:text-red-300",
   },
   confirmed: {
-    className: 'bg-teal-100 dark:bg-teal-950',
-    dotClassName: 'bg-teal-600',
-    label: 'Confirmada',
-    textClassName: 'text-teal-700 dark:text-teal-300',
+    className: "bg-teal-100 dark:bg-teal-950",
+    dotClassName: "bg-teal-600",
+    label: "Confirmada",
+    textClassName: "text-teal-700 dark:text-teal-300",
   },
   pending: {
-    className: 'bg-amber-100 dark:bg-amber-950',
-    dotClassName: 'bg-amber-500',
-    label: 'Aguardando Confirmacao',
-    textClassName: 'text-amber-700 dark:text-amber-300',
+    className: "bg-amber-100 dark:bg-amber-950",
+    dotClassName: "bg-amber-500",
+    label: "Aguardando Confirmacao",
+    textClassName: "text-amber-700 dark:text-amber-300",
   },
 };
 
 function mapStatus(status: AgendamentoStatus): AgendaStatus {
-  if (status === 'CONFIRMADO') {
-    return 'confirmed';
+  if (status === "CONFIRMADO") {
+    return "confirmed";
   }
 
-  if (status === 'CANCELADO') {
-    return 'cancelled';
+  if (status === "CANCELADO") {
+    return "cancelled";
   }
 
-  return 'pending';
+  return "pending";
 }
 
 function getAppointmentDate(appointment: AgendamentoData) {
-  return new Date(`${appointment.dataAgendamento}T${appointment.horarioInicio}:00`);
+  return new Date(
+    `${appointment.dataAgendamento}T${appointment.horarioInicio}:00`,
+  );
 }
 
 function formatMonthLabel(date: Date) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    month: 'long',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
   }).format(date);
 }
 
@@ -90,14 +103,17 @@ function toAgendaAppointment(appointment: AgendamentoData): AgendaAppointment {
   const date = getAppointmentDate(appointment);
 
   return {
-    day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(date),
-    dentist: appointment.profissionalNome ?? 'Equipe OdontoLuma',
+    day: new Intl.DateTimeFormat("pt-BR", { day: "2-digit" }).format(date),
+    dentist: appointment.profissionalNome ?? "Equipe OdontoLuma",
     id: appointment.id,
     monthLabel: formatMonthLabel(date),
     procedure: appointment.procedimento,
     status: mapStatus(appointment.status),
     time: appointment.horarioInicio,
-    weekday: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', '').toUpperCase(),
+    weekday: new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
+      .format(date)
+      .replace(".", "")
+      .toUpperCase(),
   };
 }
 
@@ -126,7 +142,9 @@ function BrandHeader({ onOpenSettings }: { onOpenSettings: () => void }) {
         >
           <Text className="text-xs font-bold text-white">OL</Text>
         </View>
-        <Text className="text-xl font-bold text-blue-900 dark:text-blue-300">OdontoLuma</Text>
+        <Text className="text-xl font-bold text-blue-900 dark:text-blue-300">
+          OdontoLuma
+        </Text>
       </View>
 
       <Pressable
@@ -145,9 +163,16 @@ function StatusBadge({ status }: { status: AgendaStatus }) {
   const styles = statusStyles[status];
 
   return (
-    <View className={cn('flex-row items-center gap-1 rounded-full px-2 py-1', styles.className)}>
-      <View className={cn('h-1.5 w-1.5 rounded-full', styles.dotClassName)} />
-      <Text className={cn('text-[10px] font-semibold', styles.textClassName)}>{styles.label}</Text>
+    <View
+      className={cn(
+        "flex-row items-center gap-1 rounded-full px-2 py-1",
+        styles.className,
+      )}
+    >
+      <View className={cn("h-1.5 w-1.5 rounded-full", styles.dotClassName)} />
+      <Text className={cn("text-[10px] font-semibold", styles.textClassName)}>
+        {styles.label}
+      </Text>
     </View>
   );
 }
@@ -171,20 +196,30 @@ function AgendaCard({
 
         <View className="min-h-[112px] flex-row pl-1.5">
           <View className="w-[82px] items-center justify-center bg-blue-50 px-2 py-5 dark:bg-blue-950/30">
-            <Text className="text-xs font-bold text-blue-900 dark:text-blue-300">{appointment.weekday}</Text>
-            <Text className="text-3xl font-bold leading-9 text-blue-900 dark:text-blue-300">{appointment.day}</Text>
-            <Text className="text-xs text-muted-foreground">{appointment.time}</Text>
+            <Text className="text-xs font-bold text-blue-900 dark:text-blue-300">
+              {appointment.weekday}
+            </Text>
+            <Text className="text-3xl font-bold leading-9 text-blue-900 dark:text-blue-300">
+              {appointment.day}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              {appointment.time}
+            </Text>
           </View>
 
           <View className="flex-1 gap-2.5 px-5 py-5">
             <View className="flex-row items-start justify-between gap-2">
-              <Text className="flex-1 text-lg font-bold leading-6 text-foreground">{appointment.procedure}</Text>
+              <Text className="flex-1 text-lg font-bold leading-6 text-foreground">
+                {appointment.procedure}
+              </Text>
               <StatusBadge status={appointment.status} />
             </View>
 
             <View className="flex-row items-start gap-2">
               <UserRound color="#64748b" size={14} />
-              <Text className="flex-1 text-sm leading-5 text-muted-foreground">{appointment.dentist}</Text>
+              <Text className="flex-1 text-sm leading-5 text-muted-foreground">
+                {appointment.dentist}
+              </Text>
             </View>
           </View>
         </View>
@@ -197,12 +232,14 @@ function EmptyState({ selectedTab }: { selectedTab: AgendaTab }) {
   return (
     <View className="mt-6 rounded-2xl border border-border bg-card p-5">
       <Text className="text-sm font-semibold text-foreground">
-        {selectedTab === 'history' ? 'Nenhum historico encontrado.' : 'Nenhuma consulta encontrada.'}
+        {selectedTab === "history"
+          ? "Nenhum historico encontrado."
+          : "Nenhuma consulta encontrada."}
       </Text>
       <Text className="mt-1 text-sm text-muted-foreground">
-        {selectedTab === 'history'
-          ? 'Quando houver atendimentos finalizados, eles aparecerao aqui.'
-          : 'Toque em atualizar para buscar novamente sua agenda.'}
+        {selectedTab === "history"
+          ? "Quando houver atendimentos finalizados, eles aparecerao aqui."
+          : "Toque em atualizar para buscar novamente sua agenda."}
       </Text>
     </View>
   );
@@ -220,7 +257,10 @@ export function MyAgendaScreen({
     () => (agendaQuery.data ?? []).map(toAgendaAppointment),
     [agendaQuery.data],
   );
-  const agendaSections = useMemo(() => groupAppointments(appointments), [appointments]);
+  const agendaSections = useMemo(
+    () => groupAppointments(appointments),
+    [appointments],
+  );
   const isRefreshing = agendaQuery.isFetching && !agendaQuery.isLoading;
 
   async function handleRefreshAgenda() {
@@ -231,12 +271,20 @@ export function MyAgendaScreen({
     <SafeAreaView className="flex-1 bg-background">
       <BrandHeader onOpenSettings={onOpenSettings} />
 
-      <ScrollView className="flex-1" contentContainerClassName="px-4 pb-8 pt-4" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-4 pb-8 pt-4"
+        showsVerticalScrollIndicator={false}
+      >
         <View className="gap-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1 gap-1">
-              <Text className="text-3xl font-bold text-foreground">Minha Agenda</Text>
-              <Text className="text-sm leading-5 text-muted-foreground">Acompanhe suas consultas e tratamentos.</Text>
+              <Text className="text-3xl font-bold text-foreground">
+                Minha Agenda
+              </Text>
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Acompanhe suas consultas e tratamentos.
+              </Text>
             </View>
 
             <Button
@@ -254,7 +302,7 @@ export function MyAgendaScreen({
                   <RefreshCw color="#1e3a5f" size={15} />
                 )}
                 <Text className="text-xs font-bold text-blue-900 dark:text-blue-300">
-                  {isRefreshing ? 'Atualizando' : 'Atualizar'}
+                  {isRefreshing ? "Atualizando" : "Atualizar"}
                 </Text>
               </View>
             </Button>
@@ -262,7 +310,10 @@ export function MyAgendaScreen({
 
           {agendaQuery.error ? (
             <View className="rounded-xl border border-destructive/30 bg-destructive/10 p-3">
-              <Text accessibilityRole="alert" className="text-sm font-medium text-destructive">
+              <Text
+                accessibilityRole="alert"
+                className="text-sm font-medium text-destructive"
+              >
                 Nao foi possivel carregar sua agenda. Tente atualizar novamente.
               </Text>
             </View>
@@ -277,11 +328,21 @@ export function MyAgendaScreen({
               <Pressable
                 accessibilityLabel={`Ver ${tab.label.toLowerCase()}`}
                 accessibilityRole="button"
-                className={cn('h-11 flex-1 items-center justify-center rounded-lg', isSelected && 'bg-card shadow-sm')}
+                className={cn(
+                  "h-11 flex-1 items-center justify-center rounded-lg",
+                  isSelected && "bg-card shadow-sm",
+                )}
                 key={tab.value}
                 onPress={() => onSelectTab(tab.value)}
               >
-                <Text className={cn('text-sm font-bold', isSelected ? 'text-blue-900 dark:text-blue-300' : 'text-foreground')}>
+                <Text
+                  className={cn(
+                    "text-sm font-bold",
+                    isSelected
+                      ? "text-blue-900 dark:text-blue-300"
+                      : "text-foreground",
+                  )}
+                >
                   {tab.label}
                 </Text>
               </Pressable>
@@ -292,15 +353,19 @@ export function MyAgendaScreen({
         {agendaQuery.isLoading ? (
           <View className="mt-8 items-center gap-3">
             <ActivityIndicator color="#1e3a5f" />
-            <Text className="text-sm text-muted-foreground">Carregando agenda...</Text>
+            <Text className="text-sm text-muted-foreground">
+              Carregando agenda...
+            </Text>
           </View>
-        ) : selectedTab === 'history' || agendaSections.length === 0 ? (
+        ) : selectedTab === "history" || agendaSections.length === 0 ? (
           <EmptyState selectedTab={selectedTab} />
         ) : (
           <View className="mt-6 gap-6">
             {agendaSections.map((section) => (
               <View className="gap-3" key={section.title}>
-                <Text className="text-xs font-semibold uppercase text-muted-foreground">{section.title}</Text>
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                  {section.title}
+                </Text>
                 {section.appointments.map((appointment) => (
                   <AgendaCard
                     appointment={appointment}

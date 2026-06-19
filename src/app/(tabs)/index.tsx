@@ -249,6 +249,7 @@ function QuickAccessGrid() {
 
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
   const displayName = user?.name ?? 'Paciente';
 
   return (
@@ -264,10 +265,11 @@ export default function HomeScreen() {
         <NextAppointmentCard />
       </View>
 
-      {/* CTA */}
-      <View className="mb-6">
-        <RequestAppointmentButton />
-      </View>
+      {role !== 'dentist' ? (
+        <View className="mb-6">
+          <RequestAppointmentButton />
+        </View>
+      ) : null}
 
       {/* Quick access */}
       <QuickAccessGrid />

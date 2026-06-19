@@ -19,6 +19,7 @@ O estado atual do app possui home do paciente, agenda do paciente, solicitacao d
 - TanStack Query
 - Axios
 - Firebase Auth
+- AsyncStorage
 - Reanimated
 - Lucide React Native
 - Shopify FlashList
@@ -134,6 +135,7 @@ Ela exibe:
 
 - Consultas do dentista carregadas pelo hook `useDentistAppointments()`
 - Botao para atualizar as consultas manualmente
+- Alternancia entre proximas consultas e historico
 - Consultas agrupadas por mes
 - Cards com data, horario, paciente, procedimento e status
 
@@ -208,7 +210,9 @@ O service de autenticacao fica em `src/services/firebase-auth.service.ts` e expo
 - `subscribeToFirebaseAuthState(callback)`
 - `mapFirebaseUser(user)`
 
-O app usa o SDK Web do Firebase (`firebase`) para autenticar com email e senha. A persistencia nativa com AsyncStorage nao esta habilitada porque `@react-native-async-storage/async-storage` nao esta instalado no projeto atual.
+O app usa o SDK Web do Firebase (`firebase`) para autenticar com email e senha. A persistencia nativa do Auth usa `@react-native-async-storage/async-storage` em `src/services/firebase.ts`, evitando que a sessao se perca ao fechar o app.
+
+O projeto tambem possui o script `scripts/ensure-debugger-locale.js`, executado no `postinstall`, para criar os arquivos `pt.json` e `pt-BR.json` do React Native debugger quando o pacote instalado vier apenas com locales padrao. Isso evita erros `ENOENT` ao abrir o debugger com locale em portugues.
 
 ## Tema
 
@@ -255,6 +259,12 @@ Execute lint:
 
 ```bash
 npm run lint
+```
+
+O `postinstall` roda automaticamente apos `npm install`:
+
+```bash
+npm run postinstall
 ```
 
 ## Variaveis de Ambiente
