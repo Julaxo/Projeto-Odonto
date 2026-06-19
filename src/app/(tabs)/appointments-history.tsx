@@ -7,7 +7,7 @@ export default function AppointmentsHistoryScreen() {
 
   return (
     <MyAgendaScreen
-      onOpenAppointmentDetails={() => router.push('/appointments/details')}
+      onOpenAppointmentDetails={(id) => router.push({ pathname: '/appointments/details', params: { id } })}
       onOpenSettings={() => router.push('/settings')}
       onSelectTab={(tab) => {
         if (tab === 'upcoming') {

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createAppointment,
+  getAppointmentById,
   getAppointmentsByDay,
   listAppointments,
   listPatientAppointments,
@@ -12,6 +13,7 @@ export const appointmentQueryKeys = {
   all: ['appointments'] as const,
   byDay: (date: string) => [...appointmentQueryKeys.all, 'day', date] as const,
   byPatient: (patientId: string) => [...appointmentQueryKeys.all, 'patient', patientId] as const,
+  detail: (appointmentId: string) => [...appointmentQueryKeys.all, 'detail', appointmentId] as const,
   lists: () => [...appointmentQueryKeys.all, 'list'] as const,
 };
 
@@ -27,6 +29,14 @@ export function useAppointmentsByDay(date: string) {
     enabled: Boolean(date),
     queryFn: () => getAppointmentsByDay(date),
     queryKey: appointmentQueryKeys.byDay(date),
+  });
+}
+
+export function useAppointment(appointmentId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(appointmentId),
+    queryFn: () => getAppointmentById(appointmentId ?? ''),
+    queryKey: appointmentQueryKeys.detail(appointmentId ?? ''),
   });
 }
 

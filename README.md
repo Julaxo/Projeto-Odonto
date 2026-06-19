@@ -101,6 +101,8 @@ A tela Minha Agenda fica em `src/features/appointments/components/my-agenda-scre
 
 Ela exibe:
 
+- Consultas do paciente carregadas pelo hook `usePatientAppointments(patientId)`
+- Botao para atualizar a agenda manualmente
 - Consultas agrupadas por mes
 - Alternancia entre proximas consultas e historico por rotas internas do grupo de tabs
 - Cards com data, horario, procedimento, profissional e status
@@ -121,10 +123,10 @@ A tela de detalhes do agendamento sugerido fica em `src/features/appointments/co
 
 Ela exibe:
 
-- Aviso de horario sugerido pela clinica
-- Data e faixa de horario
-- Profissional, sala e informacoes de duracao
-- Acoes para confirmar horario ou solicitar alteracao
+- Dados do agendamento buscados pela service a partir do `id` da rota
+- Data solicitada e faixa de horario
+- Profissional, procedimento, status e informacoes de duracao
+- Aviso de que a confirmacao do horario e feita pelo dentista
 
 O formulario de login fica em `src/features/auth/components/sign-in-form.tsx`.
 
@@ -177,6 +179,7 @@ Ele expoe:
 O hook `src/hooks/use-appointments.ts` usa TanStack Query e expoe:
 
 - `useAppointments()`
+- `useAppointment(appointmentId)`
 - `useAppointmentsByDay(date)`
 - `usePatientAppointments(patientId)`
 - `useCreateAppointment()`

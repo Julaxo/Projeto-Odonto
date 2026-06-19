@@ -1,97 +1,41 @@
-import { Settings, UserRound } from 'lucide-react-native';
-import { Pressable, ScrollView, View } from 'react-native';
+import { RefreshCw, Settings, UserRound } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { usePatientAppointments } from '@/hooks/use-appointments';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth.store';
+import { type AgendamentoData, type AgendamentoStatus } from '@/types/appointment';
 
-type AgendaStatus = 'completed' | 'confirmed' | 'pending';
+type AgendaStatus = 'cancelled' | 'confirmed' | 'pending';
 
 type AgendaAppointment = {
   day: string;
   dentist: string;
   id: string;
-  month: 'october' | 'november';
+  monthLabel: string;
   procedure: string;
   status: AgendaStatus;
   time: string;
   weekday: string;
 };
 
+type AgendaSection = {
+  appointments: AgendaAppointment[];
+  title: string;
+};
+
 type AgendaTab = 'upcoming' | 'history';
 
 type MyAgendaScreenProps = {
-  onOpenAppointmentDetails: () => void;
+  onOpenAppointmentDetails: (appointmentId: string) => void;
   onOpenSettings: () => void;
   onSelectTab: (tab: AgendaTab) => void;
   selectedTab: AgendaTab;
 };
-
-const appointments: AgendaAppointment[] = [
-  {
-    day: '12',
-    dentist: 'Dr. Carlos Silva',
-    id: 'cleaning',
-    month: 'october',
-    procedure: 'Limpeza e Profilaxia',
-    status: 'confirmed',
-    time: '09:30',
-    weekday: 'QUI',
-  },
-  {
-    day: '16',
-    dentist: 'Dra. Marina Costa',
-    id: 'orthodontic',
-    month: 'october',
-    procedure: 'Avaliacao Ortodontica',
-    status: 'pending',
-    time: '14:00',
-    weekday: 'SEG',
-  },
-  {
-    day: '08',
-    dentist: 'Dr. Carlos Silva',
-    id: 'restoration',
-    month: 'november',
-    procedure: 'Restauracao',
-    status: 'confirmed',
-    time: '10:45',
-    weekday: 'QUA',
-  },
-];
-
-const historyAppointments: AgendaAppointment[] = [
-  {
-    day: '18',
-    dentist: 'Dra. Camila Barros',
-    id: 'history-cleaning',
-    month: 'october',
-    procedure: 'Limpeza e Check-up',
-    status: 'completed',
-    time: '11:00',
-    weekday: 'QUA',
-  },
-  {
-    day: '04',
-    dentist: 'Dr. Roberto Silva',
-    id: 'history-evaluation',
-    month: 'october',
-    procedure: 'Avaliacao Inicial',
-    status: 'completed',
-    time: '15:30',
-    weekday: 'QUA',
-  },
-  {
-    day: '22',
-    dentist: 'Dra. Marina Costa',
-    id: 'history-follow-up',
-    month: 'november',
-    procedure: 'Retorno Ortodontico',
-    status: 'completed',
-    time: '08:30',
-    weekday: 'QUA',
-  },
-];
 
 const agendaTabs: { label: string; value: AgendaTab }[] = [
   { label: 'Proximas', value: 'upcoming' },
@@ -99,6 +43,12 @@ const agendaTabs: { label: string; value: AgendaTab }[] = [
 ];
 
 const statusStyles: Record<AgendaStatus, { className: string; dotClassName: string; label: string; textClassName: string }> = {
+  cancelled: {
+    className: 'bg-red-100 dark:bg-red-950',
+    dotClassName: 'bg-red-600',
+    label: 'Cancelada',
+    textClassName: 'text-red-700 dark:text-red-300',
+  },
   confirmed: {
     className: 'bg-teal-100 dark:bg-teal-950',
     dotClassName: 'bg-teal-600',
@@ -111,13 +61,60 @@ const statusStyles: Record<AgendaStatus, { className: string; dotClassName: stri
     label: 'Aguardando Confirmacao',
     textClassName: 'text-amber-700 dark:text-amber-300',
   },
-  completed: {
-    className: 'bg-slate-100 dark:bg-slate-900',
-    dotClassName: 'bg-slate-500',
-    label: 'Finalizada',
-    textClassName: 'text-slate-700 dark:text-slate-300',
-  },
 };
+
+function mapStatus(status: AgendamentoStatus): AgendaStatus {
+  if (status === 'CONFIRMADO') {
+    return 'confirmed';
+  }
+
+  if (status === 'CANCELADO') {
+    return 'cancelled';
+  }
+
+  return 'pending';
+}
+
+function getAppointmentDate(appointment: AgendamentoData) {
+  return new Date(`${appointment.dataAgendamento}T${appointment.horarioInicio}:00`);
+}
+
+function formatMonthLabel(date: Date) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function toAgendaAppointment(appointment: AgendamentoData): AgendaAppointment {
+  const date = getAppointmentDate(appointment);
+
+  return {
+    day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(date),
+    dentist: appointment.profissionalNome ?? 'Equipe OdontoLuma',
+    id: appointment.id,
+    monthLabel: formatMonthLabel(date),
+    procedure: appointment.procedimento,
+    status: mapStatus(appointment.status),
+    time: appointment.horarioInicio,
+    weekday: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', '').toUpperCase(),
+  };
+}
+
+function groupAppointments(appointments: AgendaAppointment[]): AgendaSection[] {
+  const sections = new Map<string, AgendaAppointment[]>();
+
+  appointments.forEach((appointment) => {
+    const section = sections.get(appointment.monthLabel) ?? [];
+    section.push(appointment);
+    sections.set(appointment.monthLabel, section);
+  });
+
+  return Array.from(sections.entries()).map(([title, sectionAppointments]) => ({
+    appointments: sectionAppointments,
+    title,
+  }));
+}
 
 function BrandHeader({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
@@ -160,14 +157,14 @@ function AgendaCard({
   onOpenAppointmentDetails,
 }: {
   appointment: AgendaAppointment;
-  onOpenAppointmentDetails: () => void;
+  onOpenAppointmentDetails: (appointmentId: string) => void;
 }) {
   return (
     <Pressable
       accessibilityLabel={`Abrir detalhes de ${appointment.procedure}`}
       accessibilityRole="button"
       className="rounded-2xl bg-card shadow-sm shadow-black/10"
-      onPress={onOpenAppointmentDetails}
+      onPress={() => onOpenAppointmentDetails(appointment.id)}
     >
       <View className="overflow-hidden rounded-2xl border border-border/60 bg-card">
         <View className="absolute bottom-0 left-0 top-0 w-1.5 bg-blue-900 dark:bg-blue-700" />
@@ -196,25 +193,80 @@ function AgendaCard({
   );
 }
 
+function EmptyState({ selectedTab }: { selectedTab: AgendaTab }) {
+  return (
+    <View className="mt-6 rounded-2xl border border-border bg-card p-5">
+      <Text className="text-sm font-semibold text-foreground">
+        {selectedTab === 'history' ? 'Nenhum historico encontrado.' : 'Nenhuma consulta encontrada.'}
+      </Text>
+      <Text className="mt-1 text-sm text-muted-foreground">
+        {selectedTab === 'history'
+          ? 'Quando houver atendimentos finalizados, eles aparecerao aqui.'
+          : 'Toque em atualizar para buscar novamente sua agenda.'}
+      </Text>
+    </View>
+  );
+}
+
 export function MyAgendaScreen({
   onOpenAppointmentDetails,
   onOpenSettings,
   onSelectTab,
   selectedTab,
 }: MyAgendaScreenProps) {
-  const octoberAppointments = appointments.filter((appointment) => appointment.month === 'october');
-  const novemberAppointments = appointments.filter((appointment) => appointment.month === 'november');
-  const historyOctoberAppointments = historyAppointments.filter((appointment) => appointment.month === 'october');
-  const historyNovemberAppointments = historyAppointments.filter((appointment) => appointment.month === 'november');
+  const userId = useAuthStore((state) => state.user?.id);
+  const agendaQuery = usePatientAppointments(userId);
+  const appointments = useMemo(
+    () => (agendaQuery.data ?? []).map(toAgendaAppointment),
+    [agendaQuery.data],
+  );
+  const agendaSections = useMemo(() => groupAppointments(appointments), [appointments]);
+  const isRefreshing = agendaQuery.isFetching && !agendaQuery.isLoading;
+
+  async function handleRefreshAgenda() {
+    await agendaQuery.refetch();
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
       <BrandHeader onOpenSettings={onOpenSettings} />
 
       <ScrollView className="flex-1" contentContainerClassName="px-4 pb-8 pt-4" showsVerticalScrollIndicator={false}>
-        <View className="gap-1">
-          <Text className="text-3xl font-bold text-foreground">Minha Agenda</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">Acompanhe suas consultas e tratamentos.</Text>
+        <View className="gap-4">
+          <View className="flex-row items-start justify-between gap-3">
+            <View className="flex-1 gap-1">
+              <Text className="text-3xl font-bold text-foreground">Minha Agenda</Text>
+              <Text className="text-sm leading-5 text-muted-foreground">Acompanhe suas consultas e tratamentos.</Text>
+            </View>
+
+            <Button
+              accessibilityLabel="Atualizar minha agenda"
+              className="h-10 rounded-xl border-blue-900 px-3 dark:border-blue-700"
+              disabled={agendaQuery.isFetching}
+              onPress={handleRefreshAgenda}
+              size="sm"
+              variant="outline"
+            >
+              <View className="flex-row items-center gap-2">
+                {isRefreshing ? (
+                  <ActivityIndicator color="#1e3a5f" size="small" />
+                ) : (
+                  <RefreshCw color="#1e3a5f" size={15} />
+                )}
+                <Text className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  {isRefreshing ? 'Atualizando' : 'Atualizar'}
+                </Text>
+              </View>
+            </Button>
+          </View>
+
+          {agendaQuery.error ? (
+            <View className="rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+              <Text accessibilityRole="alert" className="text-sm font-medium text-destructive">
+                Nao foi possivel carregar sua agenda. Tente atualizar novamente.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View className="mt-5 flex-row rounded-xl bg-blue-50 p-1 dark:bg-blue-950/30">
@@ -237,53 +289,27 @@ export function MyAgendaScreen({
           })}
         </View>
 
-        {selectedTab === 'history' ? (
-          <View className="mt-6 gap-6">
-            <View className="gap-3">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">Outubro 2023</Text>
-              {historyOctoberAppointments.map((appointment) => (
-                <AgendaCard
-                  appointment={appointment}
-                  key={appointment.id}
-                  onOpenAppointmentDetails={onOpenAppointmentDetails}
-                />
-              ))}
-            </View>
-
-            <View className="gap-3">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">Novembro 2023</Text>
-              {historyNovemberAppointments.map((appointment) => (
-                <AgendaCard
-                  appointment={appointment}
-                  key={appointment.id}
-                  onOpenAppointmentDetails={onOpenAppointmentDetails}
-                />
-              ))}
-            </View>
+        {agendaQuery.isLoading ? (
+          <View className="mt-8 items-center gap-3">
+            <ActivityIndicator color="#1e3a5f" />
+            <Text className="text-sm text-muted-foreground">Carregando agenda...</Text>
           </View>
+        ) : selectedTab === 'history' || agendaSections.length === 0 ? (
+          <EmptyState selectedTab={selectedTab} />
         ) : (
           <View className="mt-6 gap-6">
-            <View className="gap-3">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">Outubro 2023</Text>
-              {octoberAppointments.map((appointment) => (
-                <AgendaCard
-                  appointment={appointment}
-                  key={appointment.id}
-                  onOpenAppointmentDetails={onOpenAppointmentDetails}
-                />
-              ))}
-            </View>
-
-            <View className="gap-3">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">Novembro 2023</Text>
-              {novemberAppointments.map((appointment) => (
-                <AgendaCard
-                  appointment={appointment}
-                  key={appointment.id}
-                  onOpenAppointmentDetails={onOpenAppointmentDetails}
-                />
-              ))}
-            </View>
+            {agendaSections.map((section) => (
+              <View className="gap-3" key={section.title}>
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">{section.title}</Text>
+                {section.appointments.map((appointment) => (
+                  <AgendaCard
+                    appointment={appointment}
+                    key={appointment.id}
+                    onOpenAppointmentDetails={onOpenAppointmentDetails}
+                  />
+                ))}
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>

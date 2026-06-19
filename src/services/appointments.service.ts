@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  DocumentSnapshot,
   getDoc,
   getDocs,
   orderBy,
@@ -46,7 +47,9 @@ function combineDateTime(date: string, time: string) {
 }
 
 function mapSnapshot(
-  snapshot: QueryDocumentSnapshot<DocumentData>,
+  snapshot:
+    | DocumentSnapshot<DocumentData>
+    | QueryDocumentSnapshot<DocumentData>,
 ): AgendamentoData {
   const data = snapshot.data() as FirestoreAgendamento;
   const horarioInicio = data.horarioInicio ?? data.horaInicio ?? "";
@@ -227,6 +230,12 @@ export async function getAppointmentsByDay(
   dataAgendamento: string,
 ): Promise<AgendamentoData[]> {
   return appointmentService.buscarAgendamentosPorDia(dataAgendamento);
+}
+
+export async function getAppointmentById(
+  appointmentId: string,
+): Promise<AgendamentoData | null> {
+  return appointmentService.buscarAgendamentoPorId(appointmentId);
 }
 
 export async function listPatientAppointments(
