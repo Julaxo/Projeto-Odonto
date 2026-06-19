@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Check, X } from 'lucide-react-native';
 
@@ -7,27 +7,55 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AppointmentStatusBadge } from '@/features/dentist/components/appointment-status-badge';
 import { useThemeColors } from '@/features/dentist/hooks/use-theme-colors';
-import { mockDentistAppointments } from '@/features/dentist/mock-data';
+import { useAppointment } from '@/hooks/use-appointments';
+import { type AgendamentoData } from '@/types/appointment';
+import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
 
-/**
- * Detalhes de uma solicitação específica, com ações de confirmar/recusar.
- * Renderizada pela rota `/(dentist)/requests/[id]`.
- *
- * NOTE: hoje busca no array mockado pelo `id` recebido via params. Quando
- * existir backend, troque por uma query do TanStack Query
- * (ex: `useDentistAppointment(id)`).
- */
+function mapStatus(status: AgendamentoData['status']): AppointmentStatus {
+  if (status === 'CONFIRMADO') {
+    return 'confirmed';
+  }
+
+  return 'pending';
+}
+
+function toDentistAppointment(appointment: AgendamentoData): DentistAppointment {
+  return {
+    date: appointment.dataAgendamento,
+    description: appointment.observacoes ?? appointment.procedimento,
+    endTime: appointment.horarioFim,
+    id: appointment.id,
+    patient: {
+      id: appointment.clienteId,
+      name: appointment.clienteNome ?? 'Paciente',
+    },
+    procedure: appointment.procedimento,
+    requestedAt: appointment.criadoEm,
+    status: mapStatus(appointment.status),
+    startTime: appointment.horarioInicio,
+  };
+}
+
 export function DentistRequestDetailsScreen() {
   const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [actionTaken, setActionTaken] = useState<'confirmed' | 'declined' | null>(null);
+  const appointmentQuery = useAppointment(typeof id === 'string' ? id : undefined);
+  const [actionTaken, setActionTaken] = useState<AppointmentStatus | null>(null);
+  const appointment = appointmentQuery.data ? toDentistAppointment(appointmentQuery.data) : null;
 
-  const appointment = useMemo(() => mockDentistAppointments.find((item) => item.id === id), [id]);
+  if (appointmentQuery.isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-background p-4">
+        <ActivityIndicator color={colors.primary} />
+        <Text className="text-sm text-muted-foreground">Carregando solicitacao...</Text>
+      </View>
+    );
+  }
 
   if (!appointment) {
     return (
       <View className="flex-1 items-center justify-center bg-background p-4">
-        <Text className="text-sm text-muted-foreground">Solicitação não encontrada.</Text>
+        <Text className="text-sm text-muted-foreground">Solicitacao nao encontrada.</Text>
       </View>
     );
   }
@@ -38,14 +66,20 @@ export function DentistRequestDetailsScreen() {
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-4 p-4">
       <Pressable
-        onPress={() => router.back()}
-        accessibilityRole="button"
         accessibilityLabel="Voltar"
+        accessibilityRole="button"
         className="flex-row items-center gap-1.5"
+        onPress={() => router.back()}
       >
         <ArrowLeft color={colors.muted} size={16} />
         <Text className="text-sm text-muted-foreground">Voltar</Text>
       </Pressable>
+
+      {appointmentQuery.error ? (
+        <Card>
+          <Text className="text-sm text-destructive">Nao foi possivel atualizar os dados da solicitacao.</Text>
+        </Card>
+      ) : null}
 
       <View className="flex-row items-center gap-3">
         <View className="h-11 w-11 items-center justify-center rounded-full bg-primary/15">
@@ -59,7 +93,7 @@ export function DentistRequestDetailsScreen() {
         </View>
         <View>
           <Text className="text-base font-semibold text-foreground">{appointment.patient.name}</Text>
-          {appointment.room ? <Text className="text-xs text-muted-foreground">{appointment.room}</Text> : null}
+          <Text className="text-xs text-muted-foreground">{appointment.date}</Text>
         </View>
       </View>
 
@@ -74,7 +108,7 @@ export function DentistRequestDetailsScreen() {
       </Card>
 
       <View className="gap-2">
-        <Text className="text-sm text-muted-foreground">Descrição do procedimento</Text>
+        <Text className="text-sm text-muted-foreground">Descricao do procedimento</Text>
         <Card>
           <Text className="text-sm text-foreground">{appointment.description}</Text>
         </Card>
@@ -82,27 +116,27 @@ export function DentistRequestDetailsScreen() {
 
       {status === 'pending' ? (
         <View className="gap-2 pt-2">
-          <Button accessibilityLabel="Confirmar horário" onPress={() => setActionTaken('confirmed')}>
+          <Button accessibilityLabel="Confirmar horario" onPress={() => setActionTaken('confirmed')}>
             <View className="flex-row items-center gap-2">
               <Check color={colors.background} size={18} />
-              <Text className="text-base font-semibold text-primary-foreground">Confirmar horário</Text>
+              <Text className="text-base font-semibold text-primary-foreground">Confirmar horario</Text>
             </View>
           </Button>
           <Button
-            accessibilityLabel="Recusar ou sugerir outro horário"
-            variant="outline"
+            accessibilityLabel="Recusar ou sugerir outro horario"
             onPress={() => setActionTaken('declined')}
+            variant="outline"
           >
             <View className="flex-row items-center gap-2">
               <X color={colors.text} size={18} />
-              <Text className="text-base text-foreground">Recusar / sugerir outro horário</Text>
+              <Text className="text-base text-foreground">Recusar / sugerir outro horario</Text>
             </View>
           </Button>
         </View>
       ) : (
         <Card>
           <Text className="text-sm text-muted-foreground">
-            {status === 'confirmed' ? 'Você confirmou este horário.' : 'Você recusou este horário.'}
+            {status === 'confirmed' ? 'Voce confirmou este horario.' : 'Voce recusou este horario.'}
           </Text>
         </Card>
       )}

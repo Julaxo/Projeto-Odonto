@@ -4,16 +4,16 @@ import {
   createAppointment,
   getAppointmentById,
   getAppointmentsByDay,
-  listDentistAppointments,
   listAppointments,
   listPatientAppointments,
+  listPatientAppointmentsDentist,
 } from '@/services/appointments.service';
 import { type AgendamentoInput } from '@/types/appointment';
 
 export const appointmentQueryKeys = {
   all: ['appointments'] as const,
   byDay: (date: string) => [...appointmentQueryKeys.all, 'day', date] as const,
-  byDentist: () => [...appointmentQueryKeys.all, 'dentist'] as const,
+  byDentist: (dentistId: string) => [...appointmentQueryKeys.all, 'dentist', dentistId] as const,
   byPatient: (patientId: string) => [...appointmentQueryKeys.all, 'patient', patientId] as const,
   detail: (appointmentId: string) => [...appointmentQueryKeys.all, 'detail', appointmentId] as const,
   lists: () => [...appointmentQueryKeys.all, 'list'] as const,
@@ -50,10 +50,11 @@ export function usePatientAppointments(patientId: string | undefined) {
   });
 }
 
-export function useDentistAppointments() {
+export function useDentistAppointments(dentistId: string | undefined) {
   return useQuery({
-    queryFn: listDentistAppointments,
-    queryKey: appointmentQueryKeys.byDentist(),
+    enabled: Boolean(dentistId),
+    queryFn: () => listPatientAppointmentsDentist(dentistId ?? ''),
+    queryKey: appointmentQueryKeys.byDentist(dentistId ?? ''),
   });
 }
 

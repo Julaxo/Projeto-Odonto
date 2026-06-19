@@ -1,57 +1,97 @@
-import { useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Calendar, Check, User, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { AppointmentStatusBadge } from '@/features/dentist/components/appointment-status-badge';
 import { useThemeColors } from '@/features/dentist/hooks/use-theme-colors';
-import { mockDentistAppointments } from '@/features/dentist/mock-data';
-import type { DentistAppointment } from '@/types/dentist';
+import { useDentistAppointments } from '@/hooks/use-appointments';
+import { type AgendamentoData } from '@/types/appointment';
+import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
 
-/**
- * Lista de solicitações de agendamento aguardando confirmação. Renderizada
- * pela rota `/(dentist)/requests`.
- *
- * NOTE: estado local apenas para feedback imediato (otimista) na lista.
- * Quando o backend existir, troque por mutations do TanStack Query
- * (ex: `useConfirmAppointment`, `useDeclineAppointment`), seguindo o
- * padrão de `src/hooks/use-appointments.ts`.
- */
+function mapStatus(status: AgendamentoData['status']): AppointmentStatus {
+  if (status === 'CONFIRMADO') {
+    return 'confirmed';
+  }
+
+  return 'pending';
+}
+
+function toDentistAppointment(appointment: AgendamentoData): DentistAppointment {
+  return {
+    date: appointment.dataAgendamento,
+    description: appointment.observacoes ?? appointment.procedimento,
+    endTime: appointment.horarioFim,
+    id: appointment.id,
+    patient: {
+      id: appointment.clienteId,
+      name: appointment.clienteNome ?? 'Paciente',
+    },
+    procedure: appointment.procedimento,
+    requestedAt: appointment.criadoEm,
+    status: mapStatus(appointment.status),
+    startTime: appointment.horarioInicio,
+  };
+}
+
 export function DentistRequestsScreen() {
   const colors = useThemeColors();
-  const [appointments, setAppointments] = useState<DentistAppointment[]>(() =>
-    mockDentistAppointments.filter((item) => item.status === 'pending'),
+  const { user } = useAuth();
+  const appointmentsQuery = useDentistAppointments(user?.id);
+  const [hiddenAppointmentIds, setHiddenAppointmentIds] = useState<string[]>([]);
+  const appointments = useMemo(
+    () =>
+      (appointmentsQuery.data ?? [])
+        .map(toDentistAppointment)
+        .filter((item) => item.status === 'pending' && !hiddenAppointmentIds.includes(item.id)),
+    [appointmentsQuery.data, hiddenAppointmentIds],
   );
 
   function handleConfirm(id: string) {
-    setAppointments((current) => current.filter((item) => item.id !== id));
+    setHiddenAppointmentIds((current) => [...current, id]);
   }
 
   function handleDecline(id: string) {
-    setAppointments((current) => current.filter((item) => item.id !== id));
+    setHiddenAppointmentIds((current) => [...current, id]);
+  }
+
+  if (appointmentsQuery.isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-background p-4">
+        <ActivityIndicator color={colors.primary} />
+        <Text className="text-sm text-muted-foreground">Carregando solicitacoes...</Text>
+      </View>
+    );
   }
 
   return (
     <View className="flex-1 bg-background p-4">
-      <Text className="text-xl font-semibold text-foreground">Solicitações</Text>
+      <Text className="text-xl font-semibold text-foreground">Solicitacoes</Text>
       <Text className="mb-4 text-sm text-muted-foreground">Confirme ou recuse os pedidos dos pacientes</Text>
 
+      {appointmentsQuery.error ? (
+        <Card className="mb-3">
+          <Text className="text-sm text-destructive">Nao foi possivel carregar as solicitacoes.</Text>
+        </Card>
+      ) : null}
+
       <FlatList
+        contentContainerClassName="gap-3"
         data={appointments}
         keyExtractor={(item) => item.id}
-        contentContainerClassName="gap-3"
         ListEmptyComponent={
           <Card>
-            <Text className="text-sm text-muted-foreground">Nenhuma solicitação pendente no momento.</Text>
+            <Text className="text-sm text-muted-foreground">Nenhuma solicitacao pendente no momento.</Text>
           </Card>
         }
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => router.push({ pathname: '/(dentist)/requests/[id]', params: { id: item.id } })}
+            accessibilityLabel={`Ver detalhes da solicitacao de ${item.patient.name}`}
             accessibilityRole="button"
-            accessibilityLabel={`Ver detalhes da solicitação de ${item.patient.name}`}
+            onPress={() => router.push({ pathname: '/(dentist)/requests/[id]', params: { id: item.id } })}
           >
             <Card className="mb-3 gap-2">
               <View className="flex-row items-start justify-between">
@@ -68,19 +108,19 @@ export function DentistRequestsScreen() {
               <View className="flex-row items-center gap-1.5">
                 <Calendar color={colors.muted} size={14} />
                 <Text className="text-sm text-muted-foreground">
-                  {item.date} · {item.startTime}
+                  {item.date} - {item.startTime}
                 </Text>
               </View>
 
               <View className="flex-row gap-2 pt-1">
                 <View className="flex-1">
                   <Button
-                    accessibilityLabel={`Confirmar solicitação de ${item.patient.name}`}
-                    size="sm"
+                    accessibilityLabel={`Confirmar solicitacao de ${item.patient.name}`}
                     onPress={(event) => {
                       event.stopPropagation();
                       handleConfirm(item.id);
                     }}
+                    size="sm"
                   >
                     <View className="flex-row items-center gap-1.5">
                       <Check color={colors.background} size={14} />
@@ -90,13 +130,13 @@ export function DentistRequestsScreen() {
                 </View>
                 <View className="flex-1">
                   <Button
-                    accessibilityLabel={`Recusar solicitação de ${item.patient.name}`}
-                    size="sm"
-                    variant="outline"
+                    accessibilityLabel={`Recusar solicitacao de ${item.patient.name}`}
                     onPress={(event) => {
                       event.stopPropagation();
                       handleDecline(item.id);
                     }}
+                    size="sm"
+                    variant="outline"
                   >
                     <View className="flex-row items-center gap-1.5">
                       <X color={colors.text} size={14} />

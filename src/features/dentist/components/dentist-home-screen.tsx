@@ -8,11 +8,34 @@ import { Card } from '@/components/ui/card';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { AppointmentStatusBadge } from '@/features/dentist/components/appointment-status-badge';
 import { useThemeColors } from '@/features/dentist/hooks/use-theme-colors';
-import {
-  getNextAppointment,
-  getPendingAppointments,
-  mockDentistAppointments,
-} from '@/features/dentist/mock-data';
+import { useDentistAppointments } from '@/hooks/use-appointments';
+import { type AgendamentoData } from '@/types/appointment';
+import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
+
+function mapStatus(status: AgendamentoData['status']): AppointmentStatus {
+  if (status === 'CONFIRMADO') {
+    return 'confirmed';
+  }
+
+  return 'pending';
+}
+
+function toDentistAppointment(appointment: AgendamentoData): DentistAppointment {
+  return {
+    date: appointment.dataAgendamento,
+    description: appointment.observacoes ?? appointment.procedimento,
+    endTime: appointment.horarioFim,
+    id: appointment.id,
+    patient: {
+      id: appointment.clienteId,
+      name: appointment.clienteNome ?? 'Paciente',
+    },
+    procedure: appointment.procedimento,
+    requestedAt: appointment.criadoEm,
+    status: mapStatus(appointment.status),
+    startTime: appointment.horarioInicio,
+  };
+}
 
 /**
  * Home do dentista. Renderizada pela rota `/(dentist)/index`.
@@ -24,9 +47,23 @@ import {
 export function DentistHomeScreen() {
   const { user } = useAuth();
   const colors = useThemeColors();
+  const appointmentsQuery = useDentistAppointments(user?.id);
 
-  const pendingAppointments = useMemo(() => getPendingAppointments(mockDentistAppointments), []);
-  const nextAppointment = useMemo(() => getNextAppointment(mockDentistAppointments), []);
+  const appointments = useMemo(
+    () => (appointmentsQuery.data ?? []).map(toDentistAppointment),
+    [appointmentsQuery.data],
+  );
+  const pendingAppointments = useMemo(
+    () => appointments.filter((appointment) => appointment.status === 'pending'),
+    [appointments],
+  );
+  const nextAppointment = useMemo(
+    () =>
+      appointments
+        .filter((appointment) => appointment.status === 'confirmed')
+        .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))[0],
+    [appointments],
+  );
 
   // `mapFirebaseUser` usa "Paciente" como fallback de nome quando não há
   // displayName/email. Como esta tela é sempre do dentista, ignoramos
@@ -56,6 +93,12 @@ export function DentistHomeScreen() {
             </View>
           </Card>
         </Pressable>
+      ) : null}
+
+      {appointmentsQuery.error ? (
+        <Card>
+          <Text className="text-sm text-destructive">Nao foi possivel carregar as consultas do dentista.</Text>
+        </Card>
       ) : null}
 
       {nextAppointment ? (

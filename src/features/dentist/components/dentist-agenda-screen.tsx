@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { AppointmentStatusBadge } from '@/features/dentist/components/appointment-status-badge';
 import { useThemeColors } from '@/features/dentist/hooks/use-theme-colors';
 import { useDentistAppointments } from '@/hooks/use-appointments';
+import { useAuthStore } from '@/store/auth.store';
 import { type AgendamentoData } from '@/types/appointment';
 import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
 
@@ -74,7 +75,8 @@ function groupByMonth(appointments: DentistAppointment[]): MonthSection[] {
 
 export function DentistAgendaScreen() {
   const colors = useThemeColors();
-  const appointmentsQuery = useDentistAppointments();
+  const dentistId = useAuthStore((state) => state.user?.id);
+  const appointmentsQuery = useDentistAppointments(dentistId);
   const appointments = useMemo(
     () => (appointmentsQuery.data ?? []).map(toDentistAppointment),
     [appointmentsQuery.data],

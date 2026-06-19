@@ -244,7 +244,11 @@ export async function listPatientAppointments(
   return appointmentService.buscarAgendamentosPosteriores(clienteId);
 }
 
-export async function listDentistAppointments(): Promise<AgendamentoData[]> {
+export async function listPatientAppointmentsDentist(
+  clienteId: string,
+): Promise<AgendamentoData[]> {
+  void clienteId;
+
   return appointmentService.buscarAgendamentosPosterioresDentista();
 }
 

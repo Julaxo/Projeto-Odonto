@@ -180,7 +180,7 @@ Ele expoe:
 
 - `createAppointment(input)` - cria um agendamento pendente
 - `getAppointmentsByDay(dataAgendamento)` - busca horarios pendentes ou confirmados de uma data
-- `listDentistAppointments()` - busca proximos agendamentos do dentista
+- `listPatientAppointmentsDentist(clienteId)` - busca proximos agendamentos do dentista
 - `listPatientAppointments(clienteId)` - busca proximos agendamentos do paciente
 - `listAppointments()` - lista agendamentos e mapeia para o formato compartilhado de cards
 - `appointmentService.dentistaConfirmar(...)` - confirma um agendamento pelo fluxo do dentista
