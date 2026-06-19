@@ -1,26 +1,40 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { router } from 'expo-router';
-import { Calendar, Check, User, X } from 'lucide-react-native';
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import { router } from "expo-router";
+import { Calendar, Check, User, X } from "lucide-react-native";
 
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useAuth } from '@/features/auth/hooks/use-auth';
-import { AppointmentStatusBadge } from '@/features/dentist/components/appointment-status-badge';
-import { useThemeColors } from '@/features/dentist/hooks/use-theme-colors';
-import { useDentistAppointments } from '@/hooks/use-appointments';
-import { type AgendamentoData } from '@/types/appointment';
-import { type AppointmentStatus, type DentistAppointment } from '@/types/dentist';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { AppointmentStatusBadge } from "@/features/dentist/components/appointment-status-badge";
+import { useThemeColors } from "@/features/dentist/hooks/use-theme-colors";
+import {
+  useConfirmDentistAppointment,
+  useDentistAppointments,
+} from "@/hooks/use-appointments";
+import { type AgendamentoData } from "@/types/appointment";
+import {
+  type AppointmentStatus,
+  type DentistAppointment,
+} from "@/types/dentist";
 
-function mapStatus(status: AgendamentoData['status']): AppointmentStatus {
-  if (status === 'CONFIRMADO') {
-    return 'confirmed';
+function mapStatus(status: AgendamentoData["status"]): AppointmentStatus {
+  if (status === "CONFIRMADO") {
+    return "confirmed";
   }
 
-  return 'pending';
+  return "pending";
 }
 
-function toDentistAppointment(appointment: AgendamentoData): DentistAppointment {
+function toDentistAppointment(
+  appointment: AgendamentoData,
+): DentistAppointment {
   return {
     date: appointment.dataAgendamento,
     description: appointment.observacoes ?? appointment.procedimento,
@@ -28,7 +42,7 @@ function toDentistAppointment(appointment: AgendamentoData): DentistAppointment 
     id: appointment.id,
     patient: {
       id: appointment.clienteId,
-      name: appointment.clienteNome ?? 'Paciente',
+      name: appointment.clienteNome ?? "Paciente",
     },
     procedure: appointment.procedimento,
     requestedAt: appointment.criadoEm,
@@ -41,16 +55,37 @@ export function DentistRequestsScreen() {
   const colors = useThemeColors();
   const { user } = useAuth();
   const appointmentsQuery = useDentistAppointments(user?.id);
-  const [hiddenAppointmentIds, setHiddenAppointmentIds] = useState<string[]>([]);
+  const confirmAppointmentMutation = useConfirmDentistAppointment();
+  const [hiddenAppointmentIds, setHiddenAppointmentIds] = useState<string[]>(
+    [],
+  );
   const appointments = useMemo(
     () =>
       (appointmentsQuery.data ?? [])
         .map(toDentistAppointment)
-        .filter((item) => item.status === 'pending' && !hiddenAppointmentIds.includes(item.id)),
+        .filter(
+          (item) =>
+            item.status === "pending" &&
+            !hiddenAppointmentIds.includes(item.id),
+        ),
     [appointmentsQuery.data, hiddenAppointmentIds],
   );
 
-  function handleConfirm(id: string) {
+  async function handleConfirm(id: string) {
+    const appointment = appointmentsQuery.data?.find((item) => item.id === id);
+
+    if (!appointment || !user?.id) {
+      return;
+    }
+
+    await confirmAppointmentMutation.mutateAsync({
+      appointmentId: id,
+      date: appointment.dataAgendamento,
+      dentistId: user.id,
+      durationMinutes: appointment.duracaoMinutos,
+      startTime: appointment.horarioInicio,
+    });
+
     setHiddenAppointmentIds((current) => [...current, id]);
   }
 
@@ -62,19 +97,35 @@ export function DentistRequestsScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-background p-4">
         <ActivityIndicator color={colors.primary} />
-        <Text className="text-sm text-muted-foreground">Carregando solicitacoes...</Text>
+        <Text className="text-sm text-muted-foreground">
+          Carregando solicitacoes...
+        </Text>
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-background p-4">
-      <Text className="text-xl font-semibold text-foreground">Solicitacoes</Text>
-      <Text className="mb-4 text-sm text-muted-foreground">Confirme ou recuse os pedidos dos pacientes</Text>
+      <Text className="text-xl font-semibold text-foreground">
+        Solicitacoes
+      </Text>
+      <Text className="mb-4 text-sm text-muted-foreground">
+        Confirme ou recuse os pedidos dos pacientes
+      </Text>
 
       {appointmentsQuery.error ? (
         <Card className="mb-3">
-          <Text className="text-sm text-destructive">Nao foi possivel carregar as solicitacoes.</Text>
+          <Text className="text-sm text-destructive">
+            Nao foi possivel carregar as solicitacoes.
+          </Text>
+        </Card>
+      ) : null}
+
+      {confirmAppointmentMutation.error ? (
+        <Card className="mb-3">
+          <Text className="text-sm text-destructive">
+            Nao foi possivel confirmar a solicitacao.
+          </Text>
         </Card>
       ) : null}
 
@@ -84,22 +135,33 @@ export function DentistRequestsScreen() {
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <Card>
-            <Text className="text-sm text-muted-foreground">Nenhuma solicitacao pendente no momento.</Text>
+            <Text className="text-sm text-muted-foreground">
+              Nenhuma solicitacao pendente no momento.
+            </Text>
           </Card>
         }
         renderItem={({ item }) => (
           <Pressable
             accessibilityLabel={`Ver detalhes da solicitacao de ${item.patient.name}`}
             accessibilityRole="button"
-            onPress={() => router.push({ pathname: '/(dentist)/requests/[id]', params: { id: item.id } })}
+            onPress={() =>
+              router.push({
+                pathname: "/(dentist)/requests/[id]",
+                params: { id: item.id },
+              })
+            }
           >
             <Card className="mb-3 gap-2">
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 gap-1">
-                  <Text className="text-base font-semibold text-foreground">{item.procedure}</Text>
+                  <Text className="text-base font-semibold text-foreground">
+                    {item.procedure}
+                  </Text>
                   <View className="flex-row items-center gap-1.5">
                     <User color={colors.muted} size={14} />
-                    <Text className="text-sm text-muted-foreground">{item.patient.name}</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      {item.patient.name}
+                    </Text>
                   </View>
                 </View>
                 <AppointmentStatusBadge status={item.status} />
@@ -116,6 +178,7 @@ export function DentistRequestsScreen() {
                 <View className="flex-1">
                   <Button
                     accessibilityLabel={`Confirmar solicitacao de ${item.patient.name}`}
+                    disabled={confirmAppointmentMutation.isPending}
                     onPress={(event) => {
                       event.stopPropagation();
                       handleConfirm(item.id);
@@ -124,7 +187,9 @@ export function DentistRequestsScreen() {
                   >
                     <View className="flex-row items-center gap-1.5">
                       <Check color={colors.background} size={14} />
-                      <Text className="text-sm font-semibold text-primary-foreground">Confirmar</Text>
+                      <Text className="text-sm font-semibold text-primary-foreground">
+                        Confirmar
+                      </Text>
                     </View>
                   </Button>
                 </View>

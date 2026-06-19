@@ -253,6 +253,22 @@ export async function listPatientAppointmentsDentist(
   return appointmentService.buscarAgendamentosDentista();
 }
 
+export async function confirmDentistAppointment({
+  appointmentId,
+  durationMinutes,
+  startTime,
+}: {
+  appointmentId: string;
+  durationMinutes: number;
+  startTime: string;
+}): Promise<void> {
+  return appointmentService.dentistaConfirmar(
+    appointmentId,
+    durationMinutes,
+    startTime,
+  );
+}
+
 export async function listAppointments(): Promise<Appointment[]> {
   const agendamentos = await appointmentService.listarAgendamentos();
   return agendamentos.map(toAppointment);

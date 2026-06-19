@@ -185,6 +185,7 @@ Ele expoe:
 - `listPatientAppointmentsDentist(clienteId)` - busca proximos agendamentos do dentista
 - `listPatientAppointments(clienteId)` - busca proximos agendamentos do paciente
 - `listAppointments()` - lista agendamentos e mapeia para o formato compartilhado de cards
+- `confirmDentistAppointment(input)` - confirma um agendamento pelo fluxo do dentista
 - `appointmentService.dentistaConfirmar(...)` - confirma um agendamento pelo fluxo do dentista
 - `appointmentService.cancelarAgendamento(id)` - cancela um agendamento
 
@@ -196,8 +197,10 @@ O hook `src/hooks/use-appointments.ts` usa TanStack Query e expoe:
 - `useDentistAppointments()`
 - `usePatientAppointments(patientId)`
 - `useCreateAppointment()`
+- `useConfirmDentistAppointment()`
 
 Ao criar um agendamento, `useCreateAppointment()` invalida as queries de lista, paciente e data selecionada para manter a interface sincronizada.
+Ao confirmar uma solicitacao, `useConfirmDentistAppointment()` atualiza o Firestore e invalida as queries de agenda, detalhe e data.
 
 ## Firebase Auth
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  confirmDentistAppointment,
   createAppointment,
   getAppointmentById,
   getAppointmentsByDay,
@@ -9,6 +10,14 @@ import {
   listPatientAppointmentsDentist,
 } from '@/services/appointments.service';
 import { type AgendamentoInput } from '@/types/appointment';
+
+type ConfirmDentistAppointmentInput = {
+  appointmentId: string;
+  date: string;
+  dentistId: string;
+  durationMinutes: number;
+  startTime: string;
+};
 
 export const appointmentQueryKeys = {
   all: ['appointments'] as const,
@@ -68,6 +77,37 @@ export function useCreateAppointment() {
         queryClient.invalidateQueries({ queryKey: appointmentQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: appointmentQueryKeys.byDay(input.dataAgendamento) }),
         queryClient.invalidateQueries({ queryKey: appointmentQueryKeys.byPatient(input.clienteId) }),
+      ]);
+    },
+  });
+}
+
+export function useConfirmDentistAppointment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      appointmentId,
+      durationMinutes,
+      startTime,
+    }: ConfirmDentistAppointmentInput) =>
+      confirmDentistAppointment({
+        appointmentId,
+        durationMinutes,
+        startTime,
+      }),
+    onSuccess: async (_result, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: appointmentQueryKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: appointmentQueryKeys.byDentist(input.dentistId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: appointmentQueryKeys.byDay(input.date),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: appointmentQueryKeys.detail(input.appointmentId),
+        }),
       ]);
     },
   });
